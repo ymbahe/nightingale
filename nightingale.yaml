@@ -1,0 +1,199 @@
+# --------------------------------------------------------------------
+# --------- Parameter file for NIGHTINGALE ---------------------------
+# --------------------------------------------------------------------
+
+# All parameters should have CamelCase style keys. Do not use underscores
+# in the parameter names (indicates nested dict structure in output Header).
+# All parameters should have a comment indicating their meaning in the line(s)
+# directly above them (unless it is obvious, e.g. 'Verbose'), and the 
+# default value afterwards (which is purely for documentation purpose, the
+# default value does not enter the code anywhere).
+
+# General settings for simulation to process
+Sim:
+  RootDir: '/cosma8/data/dp004/colibre/Runs/L0025N0376/Thermal_non_equilibrium'
+  SnapshotDir: 'snapshots'
+  SnapshotFile: 'colibre_with_SOAP_membership_XXX.hdf5'
+  Snapshot: 0
+
+InputHaloes:
+  HBTDir: 'HBTplus'
+
+# How much output the code should produce (lower = less)
+Verbose:      2   # Default: 0
+
+
+# Sources for particles that are tested for satellite membership
+Sources:
+  
+  # Particles that were in the galaxy in the previous Cantor-detection
+  # (provided it is within MaxPriorCantor snaps from current target):
+  Prior:     True     # Default: True
+  
+  # Particles that were in the galaxy when it was last a central
+  RefSnap:   True     # Default: True
+
+  # Particles from galaxies that have merged with the galaxy between the
+  # reference (last-cen) and target snapshot
+  Mergers:   True     # Default: True
+
+  # Particles from the galaxy's satellites in its last-central snapshot
+  Sats:      True     # Default: True
+
+  # Particles from its FOF in last-cen snapshot. Will trigger an error 
+  # if loading from Cantor without also loading FOFs.
+  FOF:       False    # Default: False
+
+  # Particles in the corresponding Subfind subhalo (in target snap)
+  Subfind:   True     # Default: True
+  Centre:           # Particles within x*SHMR from position in target snap
+  CentreKpc:          # Particles within x kpc from position in target snap
+  MaxPriorCantor:  5      # How far back to search for last Cantor snap
+  SubfindInSwaps:  False  # Include particles from subfind when the galaxy
+                          #   was swapped to be a central? Default = False
+
+
+# Options for candidate galaxy list
+Galaxies:
+  # Unbind particles from centrals before marking satellites?
+  UnbindCensWithSats:    False        # Default: False
+
+  # Unbind particles from central after marking satellites?	
+  UnbindCensAfterSats:   False        # Default: False
+   
+  # Unbind satellites from centrals? Setting this to False probably only 
+  # makes sense as a testing option, or to generate analogous output
+  # for the Subfind catalogue.
+  UnbindSats:         True           # Default: True
+
+  DiscardSpectres:    True      # Discard galaxies flagged as spectres 
+  DiscardAllSpectres: False     # Discard spectres aggressively 
+
+  # Load initial velocity from sniplocate catalogues, rather than SF 
+  # (recommended, since latter have weird values sometimes)
+  VelFromTracers: True      
+
+  # Particle number thresholds to be considered as subhalo:
+  Threshold:
+
+    # Min number (at unbinding) of particles:
+    All:           10             # Default: 10
+
+    # Min number (at unbinding) for recovered galaxies:
+    Recovered:     10             # Default: 10
+
+
+# Options for loading input particles:
+Input:
+
+  # Include bondary particles (only useful for testing, not in SF catalogues)
+  IncludeBoundary:    False      
+                                 
+  # Load all particles in FOF, including ones that are not in any subhalo
+  # (will abort if neither UnbindCensWithSats or UnbindCensAfterSats is set)
+  LoadFullFOF:          False      
+
+  # Initialize satellite galaxies to centrals?
+  # This should only be disabled for testing. If central unbinding is also
+  # enabled, this will cause all sats to be classed as unbound.
+  InitializeSatsToCen:     True             # Default: True
+
+  # Use `pre-regularized' cen/sat list that eliminates swaps?
+  # (strongly recommended, especially when loading root sat/FOF particles).
+  RegularizedCens: True  
+
+  # Load input data from snapshot, instead of subfind particle files?
+  # This is slower, but is useful for testing consistency of SF data.
+  FromSnapshot:        False                    # Default: False
+
+  # Should previous subhaloes be read from Cantor, instead of SF?
+  # This is generally recommended, both for speed and accuracy.
+  FromCantor:     True                      # Default: True
+
+
+# Options for recovering galaxies lost by Subfind:
+Lost:
+  
+  # Recover temporarily lost galaxies (-9 code in Spiderweb tables)
+  FindTemporarilyLost:    True                # Default: True
+
+  # Recover permanently lost galaxies (-5/-15 code in Spiderweb)
+  FindPermanentlyLost:  True                # Default: True
+     
+  # Minimum phase-space offset of SF-dead galaxies from their carrier to
+  # be considered for recovery: sqrt((delta_r/sigma_r)^2+(delta_v/sigma_v)^2)  
+  MinOffset:             2.0                # Default: 2.0
+
+  # Pedestal value of galaxies' coordinate offset/dispersion from carrier
+  # (in units of the softening length)
+  MinSoftenings:         1.0                # Default: 1.0
+
+  # Maximum number of snaps after SF merging that a galaxy is considered:
+  MaxLostSnaps:                             # Default: None
+
+  # Attempt to unbind even satellites that have previously been lost by Cantor
+  FindCantorLost:     False              # Default: False
+
+  # Attempt to unbind permanently lost satellites throughout simulation?
+  # If False, only galaxies lost in final 5 snapshots are considered.
+  FindInAllSnaps:     True               # Default: True
+
+
+# Options for output calculation and writing:
+Output:  
+
+  # File to write output to
+  File:      'CantorCatalogue_5Aug19.hdf5'
+
+  # Compute and write additional quantities, beyond pure segmentation maps?
+  GalaxyProperties:      True               # Default: True
+
+  # Mass thresholds for subhaloes with 'extra' output properties (log M/M_sun)
+  Extra:
+      Mstar:              8.5               # Default: 8.5
+      Mtot:              10.5               # Default: 10.5 
+
+  # Write out particle binding energies?
+  WriteBindingEnergy:     0                 # Default: 0
+  
+  # Write out particle radii?
+  WriteRadii:             False              # Default: True 
+
+  # Compute CentreOfPotential immediately after unbinding, instead of after
+  # *all* galaxies are unbound? This may mean that the 'central' particle
+  # is not actually in the galaxy
+  COPAtUnbinding:         True              # Default: True
+
+
+# Options for MONK engine:
+Monk:
+
+  # Verbosity level of MONK:
+  Verbose:           0                    # Default: 0
+
+  # Use monotonic unbinding mode (1, instead of 'vdBO-like', 0) for sats?
+  Monotonic: 1                            # Default: 1
+
+  # Center on ZMF for satellites (0), or 10% most-bound particles (1)?
+  Centering: 1                            # Default: 1
+
+  # Allow varying centre for satellites (0) or keep fixed (1)?
+  FixCentre: 0                            # Default: 0
+
+  # Bypass Monk completely (testing only!! --> keeps all particles as bound)
+  Bypass: False                           # Default: False
+
+  # Tree opening criterion within MONK -- larger means less accurate.
+  PotErrTol: 1.0                          # Default: 1.0
+  
+# Debugging and testing options:
+Check:
+
+  # Cadence of full reporting for galaxy unbinding (every Nth):
+  ReportFrequency: 1000
+
+  # Stop program if FOF haloes were completely missed:
+  MaxLengthOfMissedFOF:                      # Default: None
+
+  # Debug option to suppress Hubble flow
+  NoHubble:                False             # Default: False
