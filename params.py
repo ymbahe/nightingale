@@ -40,8 +40,6 @@ def parse_arguments():
 def parse_parameter_file(par_file):
     """Parse the YAML input parameter file to `par' dict."""
 
-    global par
-
     with open(par_file, 'r') as stream:
         try:
             par = yaml.safe_load(stream)
@@ -55,7 +53,8 @@ def override_parameters(par, args):
     # Check if simulation was specified on the command line:
 
     if 'snapshot' in args:
-        par['Sim']['Snapshot'] = args.snapshot
+        if args.snapshot is not None:
+            par['Sim']['Snapshot'] = args.snapshot
 
 
 
