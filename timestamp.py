@@ -4,6 +4,7 @@ Pulled out of cantor_base.py 17 Feb 2025.
 """
 
 import numpy as np
+import time
 
 class TimeStamp:
     """Class for recording the runtime of program sections."""
