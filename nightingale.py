@@ -21,12 +21,12 @@ def main():
     args = params.parse_arguments()
 
     # Parse input parameter file:
-    par = params.parse_parameter_file(args)
+    par = params.parse_parameter_file(args.param_file)
 
     # Check whether any parameters in the param file should be overriden by
     # command-line arguments
     params.override_parameters(par, args)
-        
+
     # Set derived parameters and perform consistency checks:
     params.setup(par)
 
