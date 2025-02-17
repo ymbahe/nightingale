@@ -26,6 +26,12 @@ def parse_arguments():
              "value in the parameter file."
     )
     
+    args = parser.parse_args()
+
+    # --------------------------------
+    # Consistency checks to go here...
+    # --------------------------------
+
     return args
 
 
