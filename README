@@ -1,0 +1,65 @@
+NIGHTINGALE - version 2 of Cantor, adapted for SWIFT/HBT-HERONS input.
+
+Started 17 Feb 2025.
+
+The purpose of this script is to reprocess subhalo catalogues for optimized
+assignment of particles to subhaloes. As in Cantor, the basic principle is
+that we start with a `source' of particles from previous snapshots, and then
+perform iterative unbinding from there. Any particle can belong to the source
+of multiple subhaloes, but if it is bound to more than one it will only be
+assigned to the single subhalo to which it is best matched (see below).
+
+Different from Cantor, there is no longer special consideration for the
+`reference' snapshot when the subhalo was last a central. This is because it
+turned out that accretion of new particles onto subhaloes is significant enough
+that later snapshots need to be considered anyway, and so it is simpler and
+cleaner to only base the source finding on the most recent snapshots. With
+the snapshot to be processed labelled `T' (target), we mostly consider the
+previous snapshot (T-1), but also the one before that (T-2) to account for
+particles that were erroneously marked as unbound in T-1.
+
+A second key difference is that we distinguish between `active' and `passive'
+source particles. The latter are considered as massless during gravitational
+unbinding, and therefore do not contribute to the subhalo potential. If they
+are bound to the active part of the subhalo then they are considered as normal
+subhalo members. This allows us to be quite inclusive in the source definition
+while minimising the risk of converging to a wrong subhalo due to these extra
+particles.
+
+Sources are composed of the following categories:
+
+ACTIVE:
+0. Particles that, in T-1, belonged to a parent of the galaxy under
+   consideration.
+1. Particles that, in T-1, belonged to the galaxy under consideration
+2. Particles that, in T-1, belonged to a galaxy that merged with the target
+   galaxy between T-1 and T.
+3. Particles that were identified as belonging to the subhalo by HBT-HERON.
+
+PASSIVE:
+4. Particles that belonged to the galaxy in the pre-prior snapshot (T-2)
+5. Particles that lie within 2.0 x the maximum distance of HBT-HERONS members.
+6. Particles that, in T-1, belonged to subhaloes that are now within 2.0x the
+   maximum distance of HBT-HERONS members.
+
+Particles claimed by multiple subhaloes are assigned to the one for which they
+are highest in this origin list (e.g. a particle will always remain within
+its previous satellite if still bound to it, unless it becomes bound to one of
+its children). Two special cases:
+
+(a) For the highest origin category (0), if a particle is claimed by multiple
+    children of its prior galaxy, the lowest-ranked one wins. This effectively
+    permits accretion by (sub-)satellites from their parents wherever physical.
+    If it is claimed by multiple children of the same rank, the one whose
+    centre is closest to the particle wins.
+(b) For categories 5 and 6, if a particle is claimed by multiple subhaloes
+    at the same origin level, the one whose centre is closest to the particle
+    wins.
+
+At the implementation level, classes are divided out over individual files.
+In addition, input and output functionality is outsourced to individual
+files to allow for easy swapping of different simulations.
+
+
+
+
