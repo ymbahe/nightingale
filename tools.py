@@ -62,7 +62,7 @@ def dict2att(dictIn, outloc, container='Header', pre='',
                 value = np.string_(value)
 
             hdf5.write_hdf5_attribute(
-            	outloc, container, preOut + key, value)
+                outloc, container, preOut + key, value)
 
 
 def dict2out(dictIn, bool_as_int=True, pre=''):

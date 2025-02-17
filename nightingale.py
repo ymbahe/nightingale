@@ -10,12 +10,12 @@ import params
 
 
 def main():
-	"""Main function of Nightingale, processes one snapshot.
+    """Main function of Nightingale, processes one snapshot.
 
-	Parses the parameter file and command-line options, reads data,
-	processes individual subhaloes, gathers results, derives output,
-	writes output.
-	"""
+    Parses the parameter file and command-line options, reads data,
+    processes individual subhaloes, gathers results, derives output,
+    writes output.
+    """
 
     # Parse command-line options:
     args = params.parse_arguments()
@@ -33,5 +33,5 @@ def main():
     
 
 if __name__ == "__main__":
-	main()
-	print("Done!")
+    main()
+    print("Done!")
