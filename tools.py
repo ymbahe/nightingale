@@ -158,6 +158,10 @@ def eprint(string, linestyle = '-', padWidth = 1, lineWidth = 1,
 
 
 def print_memory_usage(pre=''):
+    """Dummy that does nothing."""
+    pass
+
+def print_memory_usage_real(pre=''):
     """
     Print (total) current memory usage of the program, as seen by the OS.
 
