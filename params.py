@@ -6,6 +6,8 @@ Started 17 Feb 2025.
 import yaml
 import argparse
 from tools import eprint, dict2out
+from pdb import set_trace
+import numpy as np
 
 def parse_arguments():
     """Parse the command-line arguments."""
@@ -21,7 +23,7 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        '-s', '--snapshot',
+        '-s', '--snapshot', type=int,
         help="The snapshot index to process. If given, this overrides any "
              "value in the parameter file."
     )
@@ -51,18 +53,19 @@ def parse_parameter_file(par_file):
 
 def override_parameters(par, args):
     # Check if simulation was specified on the command line:
-    if len(sys.argv) > 2:
-        par['Sim']['Start'] = int(sys.argv[2])
-        par['Sim']['End'] = par['Sim']['Start'] + 1
 
-    if len(sys.argv) > 3:
-        par['Snaps']['Start'] = int(sys.argv[3])
-    if len(sys.argv) > 4:
-        par['Snaps']['End'] = int(sys.argv[4])
+    if 'snapshot' in args:
+        par['Sim']['Snapshot'] = args.snapshot
+
 
 
 def setup(par):
     """Set derived parameters and do consistency checks."""
+
+    # Form snapshot file:
+    snap_str = f'{par['Sim']['Snapshot']:04d}'
+    par['Sim']['SnapshotFile'] = (
+        par['Sim']['SnapshotFile'].replace('XXX', snap_str))
 
     # Set derived parameters:
     if (par['Lost']['FindTemporarilyLost'] or 
