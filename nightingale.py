@@ -36,6 +36,8 @@ def main():
     # Set derived parameters and perform consistency checks:
     params.setup(par)
 
+    # -------------------------------------------------------------------
+
     # Set up a 'Snapshot' class instance that holds its basic properties:
     targetSnap = Snapshot(par)
     priorSnap = Snapshot(par, offset=-1)
@@ -50,6 +52,8 @@ def main():
     # Load particle data
     particles = SnapshotParticles(targetSnap)
 
+    # --------------------------------------------------------------------
+
     # Initialise particle re-assignment
     particles.initialise_subhaloes()
 
@@ -61,7 +65,7 @@ def main():
 
         # Find the source particles of the galaxy (separate from
         # initialisation to allow for easier swapping)
-        galaxy_particles = galaxy.find_source_particles(particles)
+        galaxy_particles = galaxy.find_source_particles()
 
         # Perform gravitational unbinding
         final_subhalo_coords = galaxy_particles.unbind()
@@ -73,6 +77,8 @@ def main():
 
     # All galaxies are processed now. Resolve assignment conflicts
     particles.resolve_assignment_conflicts()
+
+    # ----------------------------------------------------------------------
 
     # We are done with the main part now -- all particles are assigned to their
     # final subhalo. Hand over to output processing...
