@@ -38,10 +38,13 @@ def main():
 
     # -------------------------------------------------------------------
 
+    # Set up a 'Simulation' class instance for simulation-wide properties
+    sim = Simulation(par)
+
     # Set up a 'Snapshot' class instance that holds its basic properties:
-    targetSnap = Snapshot(par)
-    priorSnap = Snapshot(par, offset=-1)
-    prePriorSnap = Snapshot(par, offset=-2)
+    targetSnap = Snapshot(sim)
+    priorSnap = Snapshot(sim, offset=-1)
+    prePriorSnap = Snapshot(sim, offset=-2)
 
     # Load target snapshot subhaloes
     subhaloes = SnapshotGalaxies(targetSnap)
