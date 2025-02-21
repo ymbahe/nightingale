@@ -188,3 +188,42 @@ def print_memory_usage_real(pre=''):
 
     print(pre + "Using {:d} KB (={:.1f} MB, {:.1f} GB)." 
           .format(mem, mem/1024, mem/1024/1024))
+
+
+class SplitList:
+    """Class to simplify particle lookup by a given property."""
+
+    def __init__(self, quant, lims):
+        """
+        Class constructur.
+
+        Parameters:
+        -----------
+        quant : ndarray
+            The quantity by which elements should be retrievable.
+        lims : ndarray
+            The boundaries (in the same quantity and units as quant) of
+            each retrievable 'element'.
+        """
+
+        self.argsort = np.argsort(quant)
+        self.splits = np.searchsorted(quant, lims, sorter = self.argsort)
+
+    def __call__(self, index):
+        """
+        Return all input elements that fall in a given bin.
+
+        Parameters:
+        -----------
+        index : int
+            The index corresponding to the supplied 'lims' array for which
+            elements should be retrieved. All elements with 'quant' between
+            lims[index] and lims[index+1] will be returned.
+
+        Returns:
+        --------
+        elements : ndarray
+            The elements that lie in the desired quantity range.
+        """
+
+        return self.argsort[self.splits[index]:self.splits[index+1]]
