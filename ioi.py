@@ -62,6 +62,11 @@ def form_subhalo_particle_file(par, isnap):
 	particle_file_name.replace('XXX', f'{isnap:04d}')
 	return par['Sim']['Rootdir'] + particle_file_name
 
+def form_subhalo_membership_file(par, isnap):
+	"""Form the file name with subhalo membership information."""
+	membership_file_name = par['Sim']['MembershipFileName']
+	membership_file_name.replace('XXX', f'{isnap:04d}')
+	return par['Sim']['Rootdir'] + membership_file_name
 
 def load_subhalo_catalogue(sub_file, fields=[]):
 	"""Load the named fields from the subhalo catalogue."""

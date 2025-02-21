@@ -40,6 +40,8 @@ class Snapshot:
 		self.snapshot_file = ioi.form_snapshot_file(par, isnap)
 		self.subhalo_file = ioi.form_subhalo_file(par, isnap)
 		self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
+		self.subhalo_membership_file = ioi.form_subhalo_membership_file(
+			par, isnap)
 		self.nightingale_property_file = io.form_nightingale_property_file(
 			par, isnap)
 		self.nightingale_id_file = io.form_nightingale_id_file(par, isnap)
