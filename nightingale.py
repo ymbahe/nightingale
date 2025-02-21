@@ -10,7 +10,6 @@ import params
 from snapshot import Snapshot
 
 
-
 def main():
     """Main function of Nightingale, processes one snapshot.
 
@@ -43,14 +42,16 @@ def main():
 
     # Set up a 'Snapshot' class instance that holds its basic properties:
     targetSnap = Snapshot(sim)
-    priorSnap = Snapshot(sim, offset=-1)
-    prePriorSnap = Snapshot(sim, offset=-2)
+    sim.targetSnap = targetSnap
+    sim.priorSnap = Snapshot(sim, offset=-1)
+    sim.prePriorSnap = Snapshot(sim, offset=-2)
 
     # Load target snapshot subhaloes
     subhaloes = SnapshotGalaxies(targetSnap)
 
     # Load information about subhaloes in prior snapshots
-    # TO BE ADDED once this has become clearer
+    priorSnap.subhaloes = SnapshotGalaxies(sim.priorSnap, kind='prior')
+    prePriorSnap.subhaloes = SnapshotGalaxies(sim.prePriorSnap, kind='prior')
 
     # Load particle data
     particles = SnapshotParticles(targetSnap)
