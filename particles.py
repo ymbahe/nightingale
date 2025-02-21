@@ -19,6 +19,103 @@ class SnapshotParticles(ParticlesBase):
 		self.snapshot = snapshot
 		self.par = snapshot.par
 
+		# Load the relevant particle properties into local attributes
+		self.load_properties()
+
+	def load_properties(self):
+		"""Load the relevant particle properties for this snapshot."""
+		snap_file = self.snapshot.snapshot_file
+		membership_file = self.snapshot.subhalo_membership_file
+		verbose = self.par['Verbose']
+
+		id_name = par['Input']['Names']['ParticleIDs']
+		mass_name = par['Input']['Names']['ParticleMasses']
+		pos_name = par['Input']['Names']['ParticleCoordinates']
+		vel_name = par['Input']['Names']['ParticleVelocities']
+		energy_name = par['Input']['Names']['ParticleInternalEnergies']
+
+		# Load "raw" snapshot information
+
+		ids = np.zeros(0, dtype=int)
+		ptypes = np.zeros(0, dtype=np.int8)
+		masses = np.zeros(0)
+		coordinates = np.zeros((0, 3))
+		velocities = np.zeros((0, 3), dtype=np.float32)
+		internal_energies = np.zeros(0)
+
+		self.n_pt = np.zeros(6, dtype=int)
+
+		with h5.File(snap_file, 'r') as f:
+			for ptype in [0, 1, 4, 5]:
+				pt_name = f'PartType{ptype}'
+				if verbose:
+					print(f"Loading particle data for type {ptype}...")
+
+				if verbose:
+					print(f"   IDs...")
+				curr_ids = f[pt_name + '/' + id_name][...]
+				ids = np.concatenate((ids, curr_ids))
+				n_pt = len(ids)
+				self.n_pt[ptype] = n_pt
+
+				if verbose:
+					print(f"   Masses...")
+				curr_masses = f[pt_name + '/' + mass_name][...]
+				if len(curr_masses) != n_pt:
+					print("Inconsistent length of masses!")
+					set_trace()
+				masses = np.concatenate((masses, curr_masses))
+
+				if verbose:
+					print(f"   Coordinates...")
+				curr_pos = f[pt_name + '/' + pos_name][...]
+				if len(curr_pos) != n_pt:
+					print("Inconsistent length of coordinates!")
+					set_trace()
+				coordinates = np.concatenate((coordinates, curr_pos))
+
+				if verbose:
+					print(f"   Velocities...")
+				curr_vel = f[pt_name + '/' + vel_name][...]
+				if len(curr_vel) != n_pt:
+					print("Inconsistent length of velocities!")
+					set_trace()
+				velocities = np.concatenate((velocities, curr_vel))
+
+				# Internal energies are only relevant for gas (PT0). But we
+				# still need to load dummy entries (0) for other types.
+				if verbose:
+					print(f"   Internal Energies...")
+				if ptype == 0:
+					curr_u = f[pt_name + '/' + energy_name][...]
+					if len(curr_u) != n_pt:
+						print("Inconsistent length of internal energies!")
+						set_trace()
+				else:
+					n_curr = len(curr_ids)
+					curr_u = np.zeros(n_curr)
+				internal_energies = np.concatenate((internal_energies, curr_u))
+
+				# Record the type of each particle, if desired
+				if self.par['Input']['RecordParticleType']:
+					curr_ptype = np.zeros(n_pt, dtype=np.int8) + ptype
+					ptypes = np.concatenate((ptypes, curr_ptype))
+
+		# Second part: load membership info...
+		membership_name = par['Input']['Names']['MembershipName']
+		subhalo_indices = np.zeros(0, dtype=int)
+		with h5.File(membership_file, 'r') as f:
+			for ptype in [0, 1, 4, 5]:
+				pt_name = f'PartType{ptype}'
+				if verbose:
+					print(f"Loading particle memberships for type {ptype}...")
+				curr_bsi = f[pt_name + '/' + membership_name][...]
+				if len(curr_bsi) != self.n_pt[ptype]:
+					print("Inconsistent length of memberships!")
+					set_trace()
+				subhalo_indices = np.concatenate((subhalo_indices, curr_bsi))
+
+
 	def get_property(self, name, indices=None):
 		"""Retrieve a named particle property.
 

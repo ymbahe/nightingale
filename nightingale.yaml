@@ -117,6 +117,9 @@ Input:
   # This is generally recommended, both for speed and accuracy.
   FromNightingale:     True                      # Default: True
 
+  # Should we keep track of different particle types? This may
+  # be automatically overridden depending on output types...
+  RecordParticleType:   False
 
 # Options for recovering galaxies lost by Subfind:
 Lost:
