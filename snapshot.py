@@ -28,14 +28,26 @@ class Snapshot:
 		# Set input file names
 		self.set_input_file_names()
 
+		print(f"Finished initialization of snapshot {self.isnap}.")
+		print(f"Redshift = {self.redshift:.2f}, H(z) = {self.hubble_z:.2f} "
+			  f"km/s/Mpc")
+
 	def set_input_file_names(self):
 		"""Form all input file names relevant to this snapshot."""
-		self.snapshot_file = ioi.form_snapshot_file(self.par, self.isnap)
-		self.subhalo_file = ioi.form_subhalo_file(self.par, self.isnap)
-		self.subhalo_particle_file = ioi.form_subhalo_particle_file(
-			self.par, self.isnap)
-		self.nightingale_property_file = io.form_nightingale_property_file(
-			self.par, self.isnap)
-		self.nightingale_id_file = io.form_nightingale_id_file(
-			self.par, self.isnap)
+		isnap = self.isnap
+		par = self.par
 
+		self.snapshot_file = ioi.form_snapshot_file(par, isnap)
+		self.subhalo_file = ioi.form_subhalo_file(par, isnap)
+		self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
+		self.nightingale_property_file = io.form_nightingale_property_file(
+			par, isnap)
+		self.nightingale_id_file = io.form_nightingale_id_file(par, isnap)
+
+		if self.par['Verbose']:
+			print(f"Set file names for snapshot {isnap}:")
+			print(f"Snapshot file: '{self.snapshot_file}'")
+			print(f"Subhalo file: '{self.subhalo_file}'")
+			print(f"Subhalo particle file: '{self.subhalo_particle_file}'")
+			print(f"Nightingale catalogue: '{self.nightingale_property_file}'")
+			print(f"Nightingale ID file: '{self.nightingale_id_file}'")
