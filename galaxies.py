@@ -3,6 +3,9 @@
 Started 17 Feb 2025.
 """
 
+import ioi
+import tools
+
 class GalaxyBase:
 
 	def dummy(self):
@@ -10,8 +13,122 @@ class GalaxyBase:
 
 class SnapshotGalaxies(GalaxyBase):
 
-	def __init__(self, snapshot):
+	def __init__(self, snapshot, kind='full'):
 		self.snap = snapshot
+		self.par = snapshot.par
+
+	def load_subhalo_properties(self):
+		"""Load the required properties from the input subhalo catalogue."""
+		subhalo_file = self.snap.subhalo_file
+		subhalo_data_names = ioi.get_subhalo_data_names()
+		subhalo_data = ioi.load_subhalo_catalogue(
+			subhalo_file, subhalo_data_names)
+
+		# TO DO: attach data fields directly to self as attributes
+
+	def load_subhalo_particles(self):
+		"""Load the full particle list for subhaloes.
+
+		Particles are loaded from either the original (`base') halo catalogue
+		or from Nightingale itself, depending on parameter settings and on
+		whether or not this is the target snapshot.
+		"""
+		if self.par['Input']['FromNightingale'] and self.snap.offset < 0:
+			self.particle_ids = ioi.load_subhalo_particles_nightingale(
+				self.nightingale_property_file, self.nightingale_id_file)
+
+		else:
+			self.particle_ids = ioi.load_subhalo_particles_external(
+				self.subhalo_particle_file, self.subhalo_ids_for_base_haloes)
+
+
+	def initialize_progenitor_list(self):
+		"""Initialise the lookup list for progenitors of each galaxy."""
+		max_desc_id = np.max(self.descendant_galaxy_ids)
+		edges = np.arange(max_desc_id+1, 1)
+		self.progenitors = tools.SplitList(self.descendant_galaxy_ids, edges)
+
+	def get_maximum_extent(self, ish):
+		"""Find the maximum extent of a subhalo"""
+		if not self.par['Sources']['Neighbours']:
+			return 0
+		extent_factor = self.par['Sources']['ExtentFactor']
+		return self.neighbour_radii[ish] * extent_factor
+
+	def get_subhalo_coordinates(self, ish):
+		"""Retrieve the coordinates of a subhalo."""
+		return self.coordinates[ish, :]
+
+	def get_subhalo_velocity(self, ish):
+		"""Retrieve the velocity of a subhalo."""
+		return self.velocities[ish, :]
+
+	def find_parent_particle_ids(self, igal):
+		"""Find the particle IDs in all parents of a specified galaxy."""
+		
+		# Initialize the properties at the level of the galaxy itself.
+		ish = self.subhalo_from_galaxy(igal)
+		depth = self.depth[ish]
+		ids = np.zeros(0, dtype=int)
+		curr_gal = igal
+		curr_ish = ish
+		if self.verbose:
+			print(f"Finding particles in parents of galaxy {igal} [SH {ish}].")
+
+		# Loop through its parents (up to level 1 -- excluding central!) and
+		# add their particles.
+		n_parents = 0
+		for ilevel in range(depth, 0, -1):
+			n_parents += 1
+			if self.verbose:
+				print(f"   Level {ilevel}: SH={curr_ish}, GalID={curr_gal}...")
+			ids_curr = self.find_galaxy_particle_ids(curr_gal)
+			ids = np.concatenate((ids, ids_curr))
+				print(f"   ... added {len(ids_curr)} particle IDs.")
+
+			# Now update the galaxy and subhalo to the immediate parent
+			curr_gal = self.parent_galaxy_of_subhalo(curr_ish)
+			curr_ish = self.subhalo_from_galaxy(curr_gal)
+
+		if self.verbose:
+			print(f"   Found {len(ids)} IDs from {n_parents} parent galaxies.")
+		return ids
+
+	def subhalo_from_galaxy(self, igal):
+		"""Find the subhalo index of a given galaxy ID"""
+		if not hasattr(self, 'galaxy_to_subhalo'):
+			self.set_up_galaxy_to_subhalo_array()
+		return self.galaxy_to_subhalo[igal]
+
+	def set_up_galaxy_to_subhalo_array(self):
+		"""Build the list translating Galaxy IDs to subhalo IDs"""
+		max_gal_id = np.max(self.galaxy_ids)
+		n_galaxies = len(self.galaxy_ids)
+		self.galaxy_to_subhalo = np.zeros(max_gal_id + 1, dtype=int) - 1
+		self.galaxy_to_subhalo[self.galaxy_ids] = np.arange(n_galaxies)
+
+	def find_galaxy_particle_ids(self, igal):
+		"""Find the particle IDs for a specified galaxy."""
+		ish = self.subhalo_from_galaxy(igal)
+		return self.find_subhalo_particle_ids(ish)
+
+	def find_mergee_particle_ids(self, igal):
+		"""Find part-IDs in all galaxies merging with a specified galaxy."""
+		mergees = self.find_galaxy_mergees(self, igal)
+		ids = np.zeros(0, dtype=int) - 1
+		for mergee_sh in mergees:
+			curr_ids = self.find_subhalo_particle_ids(mergee_sh)
+			ids = np.concatenate((ids, curr_ids))
+		return ids
+
+	def find_galaxy_mergees(self, igal):
+		"""Find subhaloes that will merge with a galaxy in the next snap."""
+		mergee_subhaloes = self.progenitors(igal)
+		return mergee_subhaloes
+
+	def find_subhalo_particle_ids(self, ish):
+		"""Find particle IDs for a specified subhalo."""
+		return self.particle_ids[ish]
 
 
 class TargetGalaxy(GalaxyBase):
@@ -30,6 +147,9 @@ class TargetGalaxy(GalaxyBase):
 		instance.
 		"""
 
+		# Convenience pointer to the the full snapshot particle instance
+		particles = self.subhaloes.snap.particles
+
 		# Find the source indices (lots of internal heavy lifting)
 		source_inds, origins = self.find_source_indices()
 
@@ -39,8 +159,15 @@ class TargetGalaxy(GalaxyBase):
 		# Load all relevant particle info into `source`
 		source.set_r(particles.get_property('r', source_inds))
 		source.set_v(particles.get_property('v', source_inds))
-		source.set_m(particles.get_property('m', source_inds))
 		source.set_u(particles.get_property('u', source_inds))
+
+		# For masses, we need to check whether we want to set passive ones
+		# permanently to zero or only consider them as 'unbound' in the first
+		# iteration.
+		source_m = particles.get_property('m', source_inds)
+		if self.par['Unbinding']['PassiveIsMassless']:
+			source_m[origins > 2] = 0
+		source.set_m(source_m)
 
 		# Attach variables of further use to self for easy re-use
 		self.source = source
@@ -56,10 +183,11 @@ class TargetGalaxy(GalaxyBase):
 		"""
 
 		snapshot = self.subhaloes.snap
-		subhaloes = self.subhaloes
-		prior_subhaloes = snapshot.prior_subhaloes
-		pre_prior_subhaloes = snapshot.pre_prior_subhaloes
 		particles = snapshot.particles
+
+		subhaloes = self.subhaloes
+		prior_subhaloes = sim.priorSnap.subhaloes
+		pre_prior_subhaloes = sim.prePriorSnap.subhaloes
 
 		# Level 0: particles that were in a parent in prior snapshot
 		ids = prior_subhaloes.find_parent_particle_ids(self.igal)
