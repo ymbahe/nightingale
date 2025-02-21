@@ -5,7 +5,7 @@ Started 17 Feb 2025.
 
 import h5py as h5
 
-def subhalo_data_names(par, with_parents=False):
+def subhalo_data_names(par, with_parents=False, with_descendants=False):
 	names = [
 		('Coordinates', 'InputHalos/HaloCentre'),
 		('Velocities', '???'),

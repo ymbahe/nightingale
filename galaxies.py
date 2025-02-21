@@ -16,11 +16,22 @@ class SnapshotGalaxies(GalaxyBase):
 	def __init__(self, snapshot, kind='full'):
 		self.snap = snapshot
 		self.par = snapshot.par
+		self.kind = kind
 
 	def load_subhalo_properties(self):
 		"""Load the required properties from the input subhalo catalogue."""
 		subhalo_file = self.snap.subhalo_file
-		subhalo_data_names = ioi.get_subhalo_data_names()
+
+		# Only need to load parent/descendant information for prior snapshots
+		if self.kind == 'prior':
+			with_parents = True
+			with_descendants = True
+		elif self.kind == 'target'
+			with_parents = False
+			with_descendants = False
+
+		subhalo_data_names = ioi.subhalo_data_names(
+			with_parents=with_parents, with_descendants=with_descendants)
 		subhalo_data = ioi.load_subhalo_catalogue(
 			subhalo_file, subhalo_data_names)
 
