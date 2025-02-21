@@ -26,6 +26,11 @@ Verbose:      2   # Default: 0
 # Sources for particles that are tested for satellite membership
 Sources:
   
+  # Include particles within a given radius of the input halo centre? 
+  Neighbours:   True
+  RadiusType:   ???
+  ExtentFactor: 1.5
+
   # Particles that were in the galaxy in the previous Cantor-detection
   # (provided it is within MaxPriorCantor snaps from current target):
   Prior:     True     # Default: True
@@ -108,7 +113,7 @@ Input:
 
   # Should previous subhaloes be read from Cantor, instead of SF?
   # This is generally recommended, both for speed and accuracy.
-  FromCantor:     True                      # Default: True
+  FromNightingale:     True                      # Default: True
 
 
 # Options for recovering galaxies lost by Subfind:
@@ -164,6 +169,16 @@ Output:
   # is not actually in the galaxy
   COPAtUnbinding:         True              # Default: True
 
+
+# Options for unbinding:
+Unbinding:
+
+  # Treat passive source particles as permanently massless (1), or only
+  # as initially unbound (0)?
+  PassiveIsMassless: 1                   # Default: 1
+
+  # Treat passive source particles as initially unbound?
+  PassiveIsUnbound: 0                    # Default: 0
 
 # Options for MONK engine:
 Monk:
