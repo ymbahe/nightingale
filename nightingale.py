@@ -48,6 +48,7 @@ def main():
 
     # Load target snapshot subhaloes
     subhaloes = SnapshotGalaxies(targetSnap)
+    targetSnap.subhaloes = subhaloes
 
     # Load information about subhaloes in prior snapshots
     priorSnap.subhaloes = SnapshotGalaxies(sim.priorSnap, kind='prior')
@@ -58,8 +59,8 @@ def main():
 
     # --------------------------------------------------------------------
 
-    # Initialise particle re-assignment
-    particles.initialise_subhaloes()
+    # Initialise particle re-assignment: set all relevant particles to central
+    particles.initialise_memberships()
 
     # Main loop over galaxies to assemble, unbind, and assign particles.
     for ish in range(subhaloes.n_subhaloes):

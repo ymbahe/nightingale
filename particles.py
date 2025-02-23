@@ -18,6 +18,7 @@ class SnapshotParticles(ParticlesBase):
 	def __init__(self, snapshot):
 		self.snapshot = snapshot
 		self.par = snapshot.par
+		self.subhaloes = snapshot.subhaloes
 
 		# Load the relevant particle properties into local attributes
 		self.load_properties()
@@ -42,6 +43,10 @@ class SnapshotParticles(ParticlesBase):
 		coordinates = np.zeros((0, 3))
 		velocities = np.zeros((0, 3), dtype=np.float32)
 		internal_energies = np.zeros(0)
+
+		# Also need to load particles' FOF IDs if we want to load full FOFs.
+		if self.par['Input']['LoadFullFOF']:
+			fof_ids = np.zeros(0, dtype=int)
 
 		self.n_pt = np.zeros(6, dtype=int)
 
@@ -101,6 +106,14 @@ class SnapshotParticles(ParticlesBase):
 					curr_ptype = np.zeros(n_pt, dtype=np.int8) + ptype
 					ptypes = np.concatenate((ptypes, curr_ptype))
 
+				# Load FOF indices, if desired
+				if self.par['Input']['LoadFullFOF']:
+					curr_fof = f[pt_name + '/' + fof_name][...]
+					if len(curr_fof) != n_pt:
+						print("Inconsistent length of FOF IDs!")
+						set_trace()
+					fof_ids = np.concatenate((fof_ids, curr_fof))
+
 		# Second part: load membership info...
 		membership_name = par['Input']['Names']['MembershipName']
 		subhalo_indices = np.zeros(0, dtype=int)
@@ -115,6 +128,19 @@ class SnapshotParticles(ParticlesBase):
 					set_trace()
 				subhalo_indices = np.concatenate((subhalo_indices, curr_bsi))
 
+		# Convert 'base' to 'main' subhalo indices (i.e. HBTplus --> SOAP)
+		subhalo_indices = subhaloes.base_to_main_indices(subhalo_indices)
+
+		# Store properties as attributes
+		self.ids = ids
+		self.ptypes = ptypes
+		self.masses = masses
+		self.coordinates = coordinates
+		self.velocities = velocities
+		self.internal_energies = internal_energies
+		self.subhalo_indices = subhalo_indices
+		if self.par['Input']['LoadFullFOF']:
+			self.fof = fof_ids
 
 	def get_property(self, name, indices=None):
 		"""Retrieve a named particle property.
@@ -142,6 +168,38 @@ class SnapshotParticles(ParticlesBase):
 			return attr
 		else:
 			return attr[indices]
+
+	def initialise_memberships(self):
+		"""Initialise the subhalo membership of each particle to its central.
+
+		The details differ depending on whether we process full FOFs or only
+		particles in subhaloes, so we just delegate to an appropriate function.
+		"""
+		if self.par['Input']['LoadFullFOF']:
+			self.initialize_memberships_from_fof()
+		else:
+			self.initialize_memberships_from_subhaloes()
+
+	def initialize_memberships_from_subhaloes():
+		"""Initialize particle membership to centrals from input subhaloes."""
+		self.subhalo_indices = self.subhalo.centrals[self.subhalo_indices]
+
+	def initialize_memberships_from_fof():
+		"""Initialize particle membership to centrals from FOF groups."""
+		# Find the central from FOF IDs
+		cen_gal_fof = self.subhalo.fof_to_central[self.fof_ids]
+
+		# Special treatment for particles that are in a galaxy but not in a FOF
+		ind_gal_nofof = np.nonzero(
+			(self.subhalo_indices >= 0) & (subhalo_indices < 0))[0]
+		cen_gal_nofof = (
+			self.subhalo.centrals[self.subhalo_indices[ind_gal_nofof]])
+
+		# Update internal subhalo_indices list (can only do it now, because we
+		# needed the original indices for no-FOF-galaxies)
+		self.subhalo_indices = cen_gal_fof
+		self.subhalo_indices[ind_gal_nofof] = cen_gal_nofof
+
 
 class GalaxyParticles(ParticlesBase):
 

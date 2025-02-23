@@ -27,7 +27,7 @@ class SnapshotGalaxies(GalaxyBase):
 			with_parents = True
 			with_descendants = True
 		elif self.kind == 'target'
-			with_parents = False
+			with_parents = True
 			with_descendants = False
 
 		subhalo_data_names = ioi.subhalo_data_names(
@@ -36,6 +36,10 @@ class SnapshotGalaxies(GalaxyBase):
 			subhalo_file, subhalo_data_names)
 
 		# TO DO: attach data fields directly to self as attributes
+
+		# Build a list pointing directly to the (top-level) parent of each
+		# subhalo, i.e. its central.
+		self.centrals = self.find_top_level_parents()
 
 	def load_subhalo_particles(self):
 		"""Load the full particle list for subhaloes.
@@ -141,6 +145,13 @@ class SnapshotGalaxies(GalaxyBase):
 		"""Find particle IDs for a specified subhalo."""
 		return self.particle_ids[ish]
 
+	def find_top_level_parents(self):
+		"""Find the top-level parent subhalo for all subhaloes."""
+		pass
+
+	def base_to_main_indices(self, ind_base):
+		"""Find the main subhalo indices for a given base subhalo indices."""
+		pass
 
 class TargetGalaxy(GalaxyBase):
 
