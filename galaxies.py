@@ -34,8 +34,8 @@ class SnapshotGalaxies(GalaxyBase):
 			with_parents=with_parents, with_descendants=with_descendants)
 		subhalo_data = ioi.load_subhalo_catalogue(
 			subhalo_file, subhalo_data_names)
-
-		# TO DO: attach data fields directly to self as attributes
+		for key in subhalo_data:
+			setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
 
 		# Build a list pointing directly to the (top-level) parent of each
 		# subhalo, i.e. its central.

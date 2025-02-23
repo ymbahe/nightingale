@@ -6,6 +6,7 @@ Started 17 Feb 2025.
 import hdf5
 import os
 import subprocess
+import re
 
 def dict2att(dictIn, outloc, container='Header', pre='',
              bool_as_int=True):
@@ -227,3 +228,8 @@ class SplitList:
         """
 
         return self.argsort[self.splits[index]:self.splits[index+1]]
+
+def key_to_attribute_name(key):
+    """Convert the CamelCase name of a key to snake_case for attribute use."""
+    name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+    return name
