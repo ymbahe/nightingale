@@ -13,3 +13,7 @@ def form_nightingale_id_file(par, isnap):
 	id_name.replace('XXX', f'{isnap:04d}')
 	return par['Output']['Directory'] + id_name
 
+class Output:
+
+	def __init__(self, subhaloes, snapshot):
+		pass
