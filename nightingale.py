@@ -61,6 +61,7 @@ def main():
 
     # Initialise particle re-assignment: set all relevant particles to central
     particles.initialise_memberships()
+    subhaloes.initialise_new_coordinates()
 
     # Main loop over galaxies to assemble, unbind, and assign particles.
     for ish in range(subhaloes.n_subhaloes):
@@ -74,7 +75,7 @@ def main():
 
         # Perform gravitational unbinding
         final_subhalo_coords = galaxy_particles.unbind()
-        subhaloes.update_coordinates(ish, final_subhalo_coords)
+        subhaloes.register_new_coordinates(ish, final_subhalo_coords)
 
         # Update full particle membership
         particles.update_membership(galaxy_particles)
@@ -82,6 +83,9 @@ def main():
 
     # All galaxies are processed now. Resolve assignment conflicts
     particles.resolve_assignment_conflicts()
+
+    # Also update the new subhalo coordinates in the main catalogue
+    subhaloes.update_coordinates()
 
     # ----------------------------------------------------------------------
 
