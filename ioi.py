@@ -6,6 +6,14 @@ Started 17 Feb 2025.
 import h5py as h5
 
 def subhalo_data_names(par, with_parents=False, with_descendants=False):
+	if par['Input']['UseSOAP']:
+		return subhalo_data_names_soap(
+			par, with_parents=with_parents, with_descendants=with_descendants)
+	else:
+		return subhalo_data_names_hbt(
+			par, with_parents=with_parents, with_descendants=with_descendants)
+
+def subhalo_data_names_soap(par, with_parents=False, with_descendants=False):
 	names = [
 		('Coordinates', 'InputHalos/HaloCentre'),
 		('Velocities', '???'),
@@ -24,6 +32,22 @@ def subhalo_data_names(par, with_parents=False, with_descendants=False):
 
 	if par['Sources']['Neigbours']:
 		names.append(('Radii', 'BoundSubhalo/???'))
+
+	return names
+
+def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
+	names = [
+		('Coordinates', 'ComovingMostBoundPosition'),
+		('Velocities', 'PhysicalAverageVelocity'),
+		('GalaxyIDs', 'TrackId'),
+		('Depth', 'Depth'),
+	]
+	if with_parents:
+		names.append(('ParentGalaxyIDs', 'NestedParentTrackId'))
+	if with_descendants:
+		names.append(('DescendantGalaxyIDs', 'DescendantTrackId'))
+	if par['Sources']['Neighbours']:
+		names.append(('Radii', 'REncloseComoving'))
 
 	return names
 
