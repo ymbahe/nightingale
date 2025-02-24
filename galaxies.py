@@ -40,6 +40,7 @@ class SnapshotGalaxies(GalaxyBase):
 		# Build a list pointing directly to the (top-level) parent of each
 		# subhalo, i.e. its central.
 		self.centrals = self.find_top_level_parents()
+		self.n_subhaloes = len(self.centrals)
 
 	def load_subhalo_particles(self):
 		"""Load the full particle list for subhaloes.
@@ -152,6 +153,35 @@ class SnapshotGalaxies(GalaxyBase):
 	def base_to_main_indices(self, ind_base):
 		"""Find the main subhalo indices for a given base subhalo indices."""
 		pass
+
+	def initialise_new_coordinates(self):
+		"""Initialise the array for updated coordinates.
+
+		We don't want to overwrite the coordinates from the input catalogue,
+		because this would introduce a dependence of the unbinding resul
+		on the processing order of subhaloes.
+		"""
+		self.new_coordinates = np.zeros((self.n_subhaloes, 3)) - 1
+
+	def register_new_coordinates(self, ish, new_coordinates):
+		"""Register the updated coordinates from unbinding."""
+		self.new_coordinates[ish, :] = new_coordinates
+
+	def update_coordinates(self):
+		"""Update the subhalo coordinates with newly computed ones.
+
+		If we didn't unbind centrals, they will not have a newly computed
+		centre. Therefore we check which coordinates should be updated.
+		"""
+		ind_update = np.nonzero(self.new_coordinates[:, 0] >= 0)[0]
+		if self.verbose:
+			print(f"Updating coordinates for {len(ind_update)} out of "
+				  f"{self.n_subhaloes} subhaloes.")
+		self.coordinates[ind_update, :] = self.new_coordinates[ind_update, :]
+
+		# We don't need the new coordinates anymore, so we can free memory
+		del self.new_coordinates
+
 
 class TargetGalaxy(GalaxyBase):
 
