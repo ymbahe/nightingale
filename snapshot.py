@@ -8,48 +8,48 @@ import ioi
 import io
 
 class Snapshot:
-	"""Hold and process snapshot-level information."""	
+    """Hold and process snapshot-level information."""  
 
-	def __init__(self, sim, offset=0):
-		self.sim = sim
-		self.par = sim.par
+    def __init__(self, sim, offset=0):
+        self.sim = sim
+        self.par = sim.par
 
-		self.isnap = par['Sim']['Snapshot'] + offset
-		self.offset = offset
+        self.isnap = par['Sim']['Snapshot'] + offset
+        self.offset = offset
 
-		self.redshift = sim.redshifts[self.isnap]
-		self.aexp = sim.aexps[self.isnap]
+        self.redshift = sim.redshifts[self.isnap]
+        self.aexp = sim.aexps[self.isnap]
 
-		# Compute Hubble parameter for this snapshot.
-		self.hubble_z = cosmo.compute_hubble_z(self.redshift)
-		if self.par['Check']['NoHubble']:
-			self.hubble_z = 0
+        # Compute Hubble parameter for this snapshot.
+        self.hubble_z = cosmo.compute_hubble_z(self.redshift)
+        if self.par['Check']['NoHubble']:
+            self.hubble_z = 0
 
-		# Set input file names
-		self.set_input_file_names()
+        # Set input file names
+        self.set_input_file_names()
 
-		print(f"Finished initialization of snapshot {self.isnap}.")
-		print(f"Redshift = {self.redshift:.2f}, H(z) = {self.hubble_z:.2f} "
-			  f"km/s/Mpc")
+        print(f"Finished initialization of snapshot {self.isnap}.")
+        print(f"Redshift = {self.redshift:.2f}, H(z) = {self.hubble_z:.2f} "
+              f"km/s/Mpc")
 
-	def set_input_file_names(self):
-		"""Form all input file names relevant to this snapshot."""
-		isnap = self.isnap
-		par = self.par
+    def set_input_file_names(self):
+        """Form all input file names relevant to this snapshot."""
+        isnap = self.isnap
+        par = self.par
 
-		self.snapshot_file = ioi.form_snapshot_file(par, isnap)
-		self.subhalo_file = ioi.form_subhalo_file(par, isnap)
-		self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
-		self.subhalo_membership_file = ioi.form_subhalo_membership_file(
-			par, isnap)
-		self.nightingale_property_file = io.form_nightingale_property_file(
-			par, isnap)
-		self.nightingale_id_file = io.form_nightingale_id_file(par, isnap)
+        self.snapshot_file = ioi.form_snapshot_file(par, isnap)
+        self.subhalo_file = ioi.form_subhalo_file(par, isnap)
+        self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
+        self.subhalo_membership_file = ioi.form_subhalo_membership_file(
+            par, isnap)
+        self.nightingale_property_file = io.form_nightingale_property_file(
+            par, isnap)
+        self.nightingale_id_file = io.form_nightingale_id_file(par, isnap)
 
-		if self.par['Verbose']:
-			print(f"Set file names for snapshot {isnap}:")
-			print(f"Snapshot file: '{self.snapshot_file}'")
-			print(f"Subhalo file: '{self.subhalo_file}'")
-			print(f"Subhalo particle file: '{self.subhalo_particle_file}'")
-			print(f"Nightingale catalogue: '{self.nightingale_property_file}'")
-			print(f"Nightingale ID file: '{self.nightingale_id_file}'")
+        if self.par['Verbose']:
+            print(f"Set file names for snapshot {isnap}:")
+            print(f"Snapshot file: '{self.snapshot_file}'")
+            print(f"Subhalo file: '{self.subhalo_file}'")
+            print(f"Subhalo particle file: '{self.subhalo_particle_file}'")
+            print(f"Nightingale catalogue: '{self.nightingale_property_file}'")
+            print(f"Nightingale ID file: '{self.nightingale_id_file}'")
