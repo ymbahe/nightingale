@@ -17,7 +17,7 @@ class Simulation:
 
 	def load_redshifts(self, par):
 		"""Load the redshift information for the simulation."""
-		redshift_file = par['Sim']['RedshiftFile']
+		redshift_file = par['Sim']['RootDir'] + '/' + par['Sim']['RedshiftFile']
 		redshifts = np.loadtxt(redshift_file)
 
 		if par['Sim']['RedshiftsAreAexp']:
