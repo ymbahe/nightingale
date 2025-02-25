@@ -26,7 +26,7 @@ class SnapshotGalaxies(GalaxyBase):
         if self.kind == 'prior':
             with_parents = True
             with_descendants = True
-        elif self.kind == 'target'
+        elif self.kind == 'target':
             with_parents = True
             with_descendants = False
 
