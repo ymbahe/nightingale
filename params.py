@@ -63,8 +63,8 @@ def setup(par):
 
     # Form snapshot file:
     snap_str = f'{par['Sim']['Snapshot']:04d}'
-    par['Sim']['SnapshotFile'] = (
-        par['Sim']['SnapshotFile'].replace('XXX', snap_str))
+    #par['Sim']['SnapshotFile'] = (
+    #    par['Sim']['SnapshotFile'].replace('XXX', snap_str))
 
     # Set derived parameters:
     if (par['Lost']['FindTemporarilyLost'] or 
@@ -79,9 +79,9 @@ def setup(par):
         par['Input']['TypeList'] = np.array([0, 1, 4, 5])
 
     # Consistency checks and warnings:
-    if par['Lost']['FindPermanentlyLost'] and not par['Input']['FromCantor']:
-        raise Exception("Unbinding lost galaxies requires "
-                        "loading CANTOR input.")
+    #if par['Lost']['FindPermanentlyLost'] and not par['Input']['FromCantor']:
+    #    raise Exception("Unbinding lost galaxies requires "
+    #                    "loading CANTOR input.")
     
     if par['Sources']['Sats'] or par['Sources']['FOF']:
         if not par['Input']['RegularizedCens']:
@@ -90,10 +90,10 @@ def setup(par):
             print("cen-sat input may lead to nonsensical results.")
             print("")
             
-        if not par['Input']['FromCantor']:
+        if not par['Input']['FromNightingale']:
             eprint("WARNING", textPad = 60, linestyle = '=')
-            print("Including root sat/fof particles without using CANTOR")
-            print("input may lead to nonsensical results.")
+            print("Including root sat/fof particles without re-using Nightingale")
+            print("output may lead to nonsensical results.")
             print("")
 
     if (not par['Output']['COPAtUnbinding'] 
@@ -102,10 +102,10 @@ def setup(par):
     else:
         par['Monk']['ReturnBindingEnergy'] = 0
 
-    if par['Sources']['Prior'] and not par['Input']['FromCantor']:
+    if par['Sources']['Prior'] and not par['Input']['FromNightingale']:
         eprint("INCONSISTENCY", textPad = 60, linestyle = '@')
         raise Exception("Cannot use previous snapshot without "
-                        "loading Cantor output.")
+                        "loading Nightingale output.")
 
     if par['Lost']['MaxLostSnaps'] is None:
         par['Lost']['MaxLostSnaps'] = np.inf
