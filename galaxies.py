@@ -32,8 +32,12 @@ class SnapshotGalaxies(GalaxyBase):
 
 		subhalo_data_names = ioi.subhalo_data_names(
 			with_parents=with_parents, with_descendants=with_descendants)
-		subhalo_data = ioi.load_subhalo_catalogue(
-			subhalo_file, subhalo_data_names)
+		if self.par['Input']['UseSOAP']:
+			subhalo_data = ioi.load_subhalo_catalogue_soap(
+				subhalo_file, subhalo_data_names)
+		else:
+			subhalo_data = ioi.load_subhalo_catalogue_hbt(
+				subhalo_file, subhalo_data_names)
 		for key in subhalo_data:
 			setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
 
