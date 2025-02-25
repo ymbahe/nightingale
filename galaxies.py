@@ -102,9 +102,10 @@ class SnapshotGalaxies(GalaxyBase):
             n_parents += 1
             if self.verbose:
                 print(f"   Level {ilevel}: SH={curr_ish}, GalID={curr_gal}...")
+
             ids_curr = self.find_galaxy_particle_ids(curr_gal)
             ids = np.concatenate((ids, ids_curr))
-                print(f"   ... added {len(ids_curr)} particle IDs.")
+            print(f"   ... added {len(ids_curr)} particle IDs.")
 
             # Now update the galaxy and subhalo to the immediate parent
             curr_gal = self.parent_galaxy_of_subhalo(curr_ish)
