@@ -30,7 +30,7 @@ Sources:
   
   # Include particles within a given radius of the input halo centre? 
   Neighbours:   True
-  RadiusType:   ???
+  RadiusType:   'EncloseRadius'
   ExtentFactor: 1.5
 
   # Particles that were in the galaxy in the previous Cantor-detection
