@@ -7,7 +7,7 @@ import numpy as np
 import monk
 
 def unbind_source(
-    r, v, m, u, status=None, rhalo_init, vhalo_init, hubble_z, params={}):
+    r, v, m, u, rhalo_init, vhalo_init, hubble_z, status=None, params={}):
     """
     Run MONK to reduce input particles to their self-bound subset.
 
