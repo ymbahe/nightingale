@@ -8,7 +8,9 @@ import tools
 import timestamp as ts
 import params
 from snapshot import Snapshot
-
+from simulation import Simulation
+from galaxies import SnapshotGalaxies, TargetGalaxy
+from particles import SnapshotParticles
 
 def main():
     """Main function of Nightingale, processes one snapshot.
