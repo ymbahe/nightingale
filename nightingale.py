@@ -82,20 +82,17 @@ def main():
         # Update full particle membership
         particles.update_membership(galaxy_particles)
 
-
-    # All galaxies are processed now. Resolve assignment conflicts
-    particles.resolve_assignment_conflicts()
-
-    # Also update the new subhalo coordinates in the main catalogue
+    # All subhaloes are processed now, and `particles` contains their final
+    # membership information. Update subhalo coordinates in the catalogue.
     subhaloes.update_coordinates()
 
     # ----------------------------------------------------------------------
 
-    # We are done with the main part now -- all particles are assigned to their
-    # final subhalo. Hand over to output processing...
+    # Almost done -- hand over to output handling...
+    output = Output(par, targetSnap, subhaloes, particles)
 
-    output = Output(par, isnap)
-    output.load_particle_data(subhaloes, particles)
+    # Process the particle-subhalo links for output
+    output.process_subhaloes_and_membership()
 
     # Compute any quantities beyond pure subhalo-->particle assignments
     output.compute_secondary_quantities()
