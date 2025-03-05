@@ -48,6 +48,12 @@ def load_waitlist_particles_nightingale(waitlist_file):
 
     return waitlist
 
+def write_waitlist_particles(waitlist_file, ids, offsets):
+    """Write the waitlist information."""
+    with h5.File(waitlist_file, 'w') as f:
+        f['Offsets'] = offsets
+        f['IDs'] = ids
+
 class Output:
     """Class for storing and writing one snapshot's output from Nightingale."""
     def __init__(self, par, snapshot, subhaloes, particles):

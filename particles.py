@@ -280,7 +280,34 @@ class SnapshotParticles(ParticlesBase):
         self.radii[bound_inds[ind_better]] = bound_radii[ind_better]
         self.subhalo_indices[bound_inds[ind_better]] = ish
         
-    
+    def filter_out_waitlist(self):
+        """Filter out and reset particles that are on the wait list."""
+        ind_waitlist = np.nonzero(self.subhalo_indices == 6)[0]
+        waitlist_split = tools.SplitList(
+            self.subhalo_indices[ind_waitlist],
+            np.arange(self.subhaloes.n_input_subhaloes + 1)
+        )
+
+        n_sh = self.subhaloes.n_input_subhaloes
+        offsets = np.zeros(n_sh, dtype=int)
+        ids = np.zeros(len(ind_waitlist), dtype=np.uint64) - 1
+
+        curr_offset = 0
+        for ish in range(n_sh):
+            inds_sh = waitlist_split(ish)
+            ids_sh = self.ids[inds_sh]
+            n_ids_sh = len(ids_sh)
+            offsets[ish + 1] = curr_offset + n_ids_sh
+            ids[curr_offset : curr_offset + n_ids_sh] = ids_sh
+            curr_offset += n_ids_sh
+
+        ion.write_waitlist_particles(self.snapshot.nightingale_waitlist_file,
+            ids, offsets)
+
+        # Reset waitlist particles to their central
+        self.subhalo_indices[ind_waitlist] = (
+            self.subhaloes.centrals[self.subhalo_indices[ind_waitlist]])
+
     def switch_memberships_to_output(self, output_shis):
         """Update particle membership to output subhalo IDs and trim."""
 
