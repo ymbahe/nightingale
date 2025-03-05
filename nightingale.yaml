@@ -33,10 +33,11 @@ Sources:
   RadiusType:   'EncloseRadius'
   ExtentFactor: 1.5
 
-  # Particles that were in the galaxy in the previous Cantor-detection
-  # (provided it is within MaxPriorCantor snaps from current target):
+  # Particles that were in the galaxy in the previous snapshot?
   Prior:     True     # Default: True
   
+  # Prioitize particles that were att
+
   # Particles that were in the galaxy when it was last a central
   RefSnap:   True     # Default: True
 

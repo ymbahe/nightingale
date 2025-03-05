@@ -19,6 +19,7 @@ class SnapshotParticles(ParticlesBase):
         self.snapshot = snapshot
         self.par = snapshot.par
         self.subhaloes = snapshot.subhaloes
+        self.n_parts = None
 
         # Load the relevant particle properties into local attributes
         self.load_properties()
@@ -142,6 +143,11 @@ class SnapshotParticles(ParticlesBase):
         if self.par['Input']['LoadFullFOF']:
             self.fof = fof_ids
 
+        self.n_parts = np.sum(self.n_pt)
+        if self.n_parts != self.ids.shape[0]:
+            print("Inconsistent particle lengths!!")
+            set_trace()
+
     def get_property(self, name, indices=None):
         """Retrieve a named particle property.
 
@@ -180,11 +186,11 @@ class SnapshotParticles(ParticlesBase):
         else:
             self.initialize_memberships_from_subhaloes()
 
-    def initialize_memberships_from_subhaloes():
+    def initialize_memberships_from_subhaloes(self):
         """Initialize particle membership to centrals from input subhaloes."""
         self.subhalo_indices = self.subhalo.centrals[self.subhalo_indices]
 
-    def initialize_memberships_from_fof():
+    def initialize_memberships_from_fof(self):
         """Initialize particle membership to centrals from FOF groups."""
         # Find the central from FOF IDs
         cen_gal_fof = self.subhalo.fof_to_central[self.fof_ids]
@@ -199,6 +205,70 @@ class SnapshotParticles(ParticlesBase):
         # needed the original indices for no-FOF-galaxies)
         self.subhalo_indices = cen_gal_fof
         self.subhalo_indices[ind_gal_nofof] = cen_gal_nofof
+
+    def switch_memberships_to_output(self, output_shis):
+        """Update particle membership to output subhalo IDs and trim."""
+
+        # Update subhalo indices to new. This will automatically set any
+        # particle in a too-small subhalo to -1 (unbound).
+        self.subhalo_indices = output_shis[self.subhalo_indices]
+        self.reject_unbound()
+
+    def reject_unbound(self):
+        """Trim the particle list to exclude any that are not in a subhalo."""
+        n_before = len(self.subhalo_indices)
+        ind_in_subhalo = np.nonzero(self.subhalo_indices >= 0)[0]
+        n_now = len(ind_in_subhalo)
+        print(f"About to reject unbound particles ({n_before} to {n_now}).")
+        update_particle_fields(ind_in_subhalo)
+
+    def update_particle_fields(source_indices):
+        """Re-arrange the particle fields by pulling from source_indices."""
+
+        # Record current particle numbers and check that they are ok
+        n_part_before = len(self.ids)
+        n_pt_before = self.n_pt
+        if n_part_before != np.sum(self.n_pt):
+            print("Inconsistent particle numbers!")
+            set_trace()
+
+        # Re-arrange the data fields
+        self.ids = self.ids[ind_in_subhalo]
+        self.ptypes = self.ptypes[ind_in_subhalo]
+        self.masses = self.masses[ind_in_subhalo]
+        self.coordinates = self.coordinates[ind_in_subhalo, :]
+        self.velocities = self.velocities[ind_in_subhalo, :]
+        self.internal_energies = self.internal_energies[ind_in_subhalo]
+        self.subhalo_indices = self.subhalo_indices[ind_in_subhalo]
+
+        # Re-calculate number of particles by type
+        self.n_pt = np.bincount(self.ptypes, minlength=6)
+        n_part_now = np.sum(self.n_pt)
+
+        print(f"Updated particle fields ({n_before} --> {n_now}).")
+        for pt in range(6):
+            print(f"   PartType {pt}: {n_pt_before[pt]} --> {self.n_pt[pt]}")
+
+    def calculate_radii(centres):
+        """Calculate the radii of all particles from the halo centres."""
+
+        if np.max(self.subhalo_indices) >= len(centres):
+            print("Uh oh. We don't have enough centres...")
+            set_trace()
+
+        centres_by_part = centres[self.subhalo_indices, :]
+        self.radii = np.linalg.norm(self.coordinates - centres_by_part)
+        tools.periodic_wrapping(self.radii, boxsize=self.par['Sim']['Boxsize'])    
+
+    def rearrange_for_output():
+        """Rearrange the particles by subhalo and radius."""
+
+        # Make sure we don't have any unbound particles
+        if np.min(self.subhalo_indices) < 0:
+            print("Why are there unbound particles??")
+            set_trace()
+        sorter = np.lexsort((self.radii, self.subhalo_indices))
+        update_particle_fields(sorter)
 
 
 class GalaxyParticles(ParticlesBase):
