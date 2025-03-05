@@ -11,6 +11,9 @@ from snapshot import Snapshot
 from simulation import Simulation
 from galaxies import SnapshotGalaxies, TargetGalaxy
 from particles import SnapshotParticles
+from ion import Output
+
+from pdb import set_trace
 
 def main():
     """Main function of Nightingale, processes one snapshot.
@@ -53,8 +56,9 @@ def main():
     targetSnap.subhaloes = subhaloes
 
     # Load information about subhaloes in prior snapshots
-    priorSnap.subhaloes = SnapshotGalaxies(sim.priorSnap, kind='prior')
-    prePriorSnap.subhaloes = SnapshotGalaxies(sim.prePriorSnap, kind='prior')
+    sim.priorSnap.subhaloes = SnapshotGalaxies(sim.priorSnap, kind='prior')
+    sim.prePriorSnap.subhaloes = SnapshotGalaxies(
+        sim.prePriorSnap, kind='prior')
 
     # Load particle data
     particles = SnapshotParticles(targetSnap)
@@ -65,26 +69,36 @@ def main():
     particles.initialise_memberships()
     subhaloes.initialise_new_coordinates()
 
+    # If we want to unbind centrals WITH satellites still attached, that
+    # needs to happen here...
+    
     # Main loop over galaxies to assemble, unbind, and assign particles.
-    for ish in range(subhaloes.n_subhaloes):
+    for ish in range(subhaloes.n_input_subhaloes):
 
+        # Don't bother with 'fake' subhaloes or centrals
+        if subhaloes.number_of_bound_particles[ish] <= 0:
+            continue
+        if subhaloes.depth[ish] == 0:
+            continue
+        print(f"Subhalo {ish} -- Depth = {subhaloes.depth[ish]}, "
+              f"N_bound_input = {subhaloes.number_of_bound_particles[ish]}")
+        
         # Initialise the galaxy with basic information
         galaxy = TargetGalaxy(subhaloes, ish)
 
         # Find the source particles of the galaxy (separate from
         # initialisation to allow for easier swapping)
         galaxy_particles = galaxy.find_source_particles()
-
+        
         # Perform gravitational unbinding
         final_subhalo_coords = galaxy_particles.unbind()
         subhaloes.register_new_coordinates(ish, final_subhalo_coords)
-
+        
         # Update full particle membership
-        particles.update_membership(galaxy_particles)
-
+        particles.update_membership(galaxy_particles, galaxy)
 
     # All galaxies are processed now. Resolve assignment conflicts
-    particles.resolve_assignment_conflicts()
+    # particles.resolve_assignment_conflicts()
 
     # Also update the new subhalo coordinates in the main catalogue
     subhaloes.update_coordinates()
@@ -94,7 +108,7 @@ def main():
     # We are done with the main part now -- all particles are assigned to their
     # final subhalo. Hand over to output processing...
 
-    output = Output(par, isnap)
+    output = Output(par, targetSnap)
     output.load_particle_data(subhaloes, particles)
 
     # Compute any quantities beyond pure subhalo-->particle assignments

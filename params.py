@@ -104,8 +104,8 @@ def setup(par):
 
     if par['Sources']['Prior'] and not par['Input']['FromNightingale']:
         eprint("INCONSISTENCY", textPad = 60, linestyle = '@')
-        raise Exception("Cannot use previous snapshot without "
-                        "loading Nightingale output.")
+        #raise Exception("Cannot use previous snapshot without "
+        #                "loading Nightingale output.")
 
     if par['Lost']['MaxLostSnaps'] is None:
         par['Lost']['MaxLostSnaps'] = np.inf

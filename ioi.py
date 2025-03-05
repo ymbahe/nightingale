@@ -4,9 +4,11 @@ Started 17 Feb 2025.
 """
 
 import h5py as h5
+import numpy as np
+from pdb import set_trace
 
 def subhalo_data_names(par, with_parents=False, with_descendants=False):
-    if par['Input']['UseSOAP']:
+    if par['InputHaloes']['UseSOAP']:
         return subhalo_data_names_soap(
             par, with_parents=with_parents, with_descendants=with_descendants)
     else:
@@ -68,31 +70,35 @@ def form_snapshot_file(par, isnap):
         The full name of the snapshot file.
     """
 
-    # TO BE IMPLEMENTED
-    snapshot_name = par['Sim']['SnapshotName']
-    snapshot_name.replace('XXX', f'{isnap:04d}')
-    path = par['Sim']['RootDir'] + snapshot_name
+    snapshot_file_name = par['Sim']['SnapshotFile']
+    snapshot_file_name = snapshot_file_name.replace('XXXX', f'{isnap:04d}')
+    path = par['Sim']['RootDir'] + '/' + snapshot_file_name
+    # print(f"Snapshot name is '{path}'")
     return path
-
 
 def form_subhalo_file(par, isnap):
     """Form the full subhalo file name for a snapshot."""
-    subhalo_file_name = par['Sim']['SubhaloFileName']
-    subhalo_file_name.replace('XXX', f'{isnap:04d}')
-    return par['Sim']['RootDir'] + subhalo_file_name
+    subhalo_file_name = par['Sim']['SubhaloFile']
+    subhalo_file_name = subhalo_file_name.replace('XXXX', f'{isnap:03d}')
+    path = par['Sim']['RootDir'] + '/' + subhalo_file_name
+    #print(f"Subhalo file name is '{path}'")
+    return path
 
 def form_subhalo_particle_file(par, isnap):
     """Form the subhalo particle file name."""
-    particle_file_name = par['Sim']['SubhaloParticleFileName']
-    particle_file_name.replace('XXX', f'{isnap:04d}')
-    return par['Sim']['Rootdir'] + particle_file_name
+    particle_file_name = par['Sim']['SubhaloParticleFile']
+    particle_file_name = particle_file_name.replace('XXXX', f'{isnap:03d}')
+    path = par['Sim']['RootDir'] + '/' + particle_file_name
+    #print(f"Subhalo particle file name is '{path}'")
+    return path
 
 def form_subhalo_membership_file(par, isnap):
     """Form the file name with subhalo membership information."""
-    membership_file_name = par['Sim']['MembershipFileName']
-    membership_file_name.replace('XXX', f'{isnap:04d}')
-    return par['Sim']['Rootdir'] + membership_file_name
-
+    membership_file_name = par['Sim']['MembershipFile']
+    membership_file_name = membership_file_name.replace('XXXX', f'{isnap:04d}')
+    path = par['Sim']['Rootdir'] + '/' + membership_file_name
+    #print(f"Particle membership file name is '{path}'")
+    return path
 
 def load_subhalo_catalogue_soap(sub_file, fields=[]):
     """Load the named fields from the subhalo catalogue."""
@@ -107,6 +113,10 @@ def load_subhalo_catalogue_soap(sub_file, fields=[]):
 
 def load_subhalo_catalogue_hbt(sub_file, fields=[]):
     """Load the named fields from the HBT subhalo catalogue."""
+    print(f"Loading HBT subhalo data\n   [{sub_file}]")
+    print("Fields to load:")
+    for ifield in fields:
+        print(f"{ifield[1]} --> {ifield[0]}")
     data = {}
     dtypes = {}
     shapes = {}
@@ -120,23 +130,29 @@ def load_subhalo_catalogue_hbt(sub_file, fields=[]):
 
     for field in fields:
         key = field[0]
-        if len(shape[key]) == 1:
-            data.key = np.zeros(n_subhaloes, dtype=dtypes[key])
+        if len(shapes[key]) == 1:
+            data[key] = np.zeros(n_subhaloes, dtype=dtypes[key])
         else:
-            full_shape = list(shape[key])
+            full_shape = list(shapes[key])
             full_shape[0] = n_subhaloes
-            data.key = np.zeros(full_shape, dtype=dtypes[key])
+            data[key] = np.zeros(full_shape, dtype=dtypes[key])
 
     offset = 0
     for ifile in range(n_files):
         file_name = sub_file.replace('.0.hdf5', f'.{ifile}.hdf5')
+        print(f"  -- reading file {ifile}...")
         with h5.File(file_name, 'r') as f:
             sub_data = f['Subhalos'][...]
             n_subhaloes_file = len(sub_data)
             for field in fields:
-                key = field[0]
-                name = field[1]
-                data[key][offset:offset+n_subhaloes_file, ...] = sub_data[key]
+                key = field[1]
+                name = field[0]
+                print(f"    -- {key} --> {name}...")
+                try:
+                    data[name][offset:offset+n_subhaloes_file, ...] = (
+                        sub_data[key])
+                except KeyError:
+                    set_trace()
         offset += n_subhaloes_file
 
     # Almost there. But we also need a 'CentralFlag', for compatibility
@@ -159,7 +175,7 @@ def load_subhalo_particles_external(subhalo_particle_file, base_indices=None):
 
     ids = np.zeros(0, dtype=int)
     for ifile in range(n_files):
-        file_name = sub_particle_file.replace('0.hdf5', f'.{ifile}.hdf5')
+        file_name = subhalo_particle_file.replace('.0.hdf5', f'.{ifile}.hdf5')
         with h5.File(file_name, 'r') as f:
             curr_ids = f['SubhaloParticles'][...]
         ids = np.concatenate((ids, curr_ids))

@@ -5,7 +5,10 @@ Started 17 Feb 2025
 
 import numpy as np
 from pdb import set_trace
+import h5py as h5
+from scipy.spatial import cKDTree
 
+import tools
 import unbinding
 
 class ParticlesBase:
@@ -19,14 +22,15 @@ class SnapshotParticles(ParticlesBase):
         self.snapshot = snapshot
         self.par = snapshot.par
         self.subhaloes = snapshot.subhaloes
-
+        self.snapshot.particles = self
+        
         # Load the relevant particle properties into local attributes
         self.load_properties()
 
     def load_properties(self):
         """Load the relevant particle properties for this snapshot."""
+        par = self.par
         snap_file = self.snapshot.snapshot_file
-        membership_file = self.snapshot.subhalo_membership_file
         verbose = self.par['Verbose']
 
         id_name = par['Input']['Names']['ParticleIDs']
@@ -37,7 +41,7 @@ class SnapshotParticles(ParticlesBase):
 
         # Load "raw" snapshot information
 
-        ids = np.zeros(0, dtype=int)
+        ids = np.zeros(0, dtype=np.uint64)
         ptypes = np.zeros(0, dtype=np.int8)
         masses = np.zeros(0)
         coordinates = np.zeros((0, 3))
@@ -49,9 +53,10 @@ class SnapshotParticles(ParticlesBase):
             fof_ids = np.zeros(0, dtype=int)
 
         self.n_pt = np.zeros(6, dtype=int)
-
+        self.n_parts = 0
+        
         with h5.File(snap_file, 'r') as f:
-            for ptype in [0, 1, 4, 5]:
+            for ptype in par['Input']['TypeList']:
                 pt_name = f'PartType{ptype}'
                 if verbose:
                     print(f"Loading particle data for type {ptype}...")
@@ -59,13 +64,18 @@ class SnapshotParticles(ParticlesBase):
                 if verbose:
                     print(f"   IDs...")
                 curr_ids = f[pt_name + '/' + id_name][...]
-                ids = np.concatenate((ids, curr_ids))
-                n_pt = len(ids)
+                n_pt = len(curr_ids)
                 self.n_pt[ptype] = n_pt
-
+                self.n_parts += n_pt
+                ids = np.concatenate((ids, curr_ids))
+                
                 if verbose:
                     print(f"   Masses...")
-                curr_masses = f[pt_name + '/' + mass_name][...]
+                if ptype == 5:
+                    pt_mass_name = par['Input']['Names']['BHParticleMasses']
+                else:
+                    pt_mass_name = mass_name
+                curr_masses = f[pt_name + '/' + pt_mass_name][...]
                 if len(curr_masses) != n_pt:
                     print("Inconsistent length of masses!")
                     set_trace()
@@ -114,23 +124,6 @@ class SnapshotParticles(ParticlesBase):
                         set_trace()
                     fof_ids = np.concatenate((fof_ids, curr_fof))
 
-        # Second part: load membership info...
-        membership_name = par['Input']['Names']['MembershipName']
-        subhalo_indices = np.zeros(0, dtype=int)
-        with h5.File(membership_file, 'r') as f:
-            for ptype in [0, 1, 4, 5]:
-                pt_name = f'PartType{ptype}'
-                if verbose:
-                    print(f"Loading particle memberships for type {ptype}...")
-                curr_bsi = f[pt_name + '/' + membership_name][...]
-                if len(curr_bsi) != self.n_pt[ptype]:
-                    print("Inconsistent length of memberships!")
-                    set_trace()
-                subhalo_indices = np.concatenate((subhalo_indices, curr_bsi))
-
-        # Convert 'base' to 'main' subhalo indices (i.e. HBTplus --> SOAP)
-        subhalo_indices = subhaloes.base_to_main_indices(subhalo_indices)
-
         # Store properties as attributes
         self.ids = ids
         self.ptypes = ptypes
@@ -138,10 +131,43 @@ class SnapshotParticles(ParticlesBase):
         self.coordinates = coordinates
         self.velocities = velocities
         self.internal_energies = internal_energies
-        self.subhalo_indices = subhalo_indices
         if self.par['Input']['LoadFullFOF']:
             self.fof = fof_ids
 
+        # Second part: get membership info...
+        self.subhalo_indices = self.subhaloes.build_particle_memberships(self)
+        
+    def ids_to_indices(self, ids):
+        """Find the internal indices corresponding to input IDs."""
+        if not hasattr(self, 'reverse_ids'):
+            success = self.build_reverse_ids()
+
+            # If we couldn't build a reverse list, we have to do this
+            # by brute force. This may take a while...
+            if not success:
+                indices = tools.find_id_indices(ids, self.ids)
+                return indices
+
+        # If we got here, we have a reverse ID list, so we just look up
+        # the answer(s).
+        try:
+            return self.reverse_ids[ids]
+        except IndexError:
+            set_trace()
+        
+    def build_reverse_ids(self):
+        """Construct a reverse ID lookup list for quick index-finding."""
+        # Check that IDs are small enough to fit into memory
+        max_id = int(np.max(self.ids))
+        if max_id > 1e10:
+            print(f"Max ID is {max_id} -- too large for reverse list.")
+            return False
+
+        # Ok, we can go ahead
+        self.reverse_ids = np.zeros(max_id + 1, dtype=int) - 1
+        self.reverse_ids[self.ids] = np.arange(self.n_parts, dtype=int)
+        return True
+        
     def get_property(self, name, indices=None):
         """Retrieve a named particle property.
 
@@ -180,31 +206,82 @@ class SnapshotParticles(ParticlesBase):
         else:
             self.initialize_memberships_from_subhaloes()
 
-    def initialize_memberships_from_subhaloes():
+        # Initialize every particle as high origin and large radii
+        self.origins = np.zeros(self.n_parts, dtype=np.int8) + 100
+        self.radii = np.zeros(self.n_parts, dtype=np.float32) + np.inf
+        
+    def initialize_memberships_from_subhaloes(self):
         """Initialize particle membership to centrals from input subhaloes."""
-        self.subhalo_indices = self.subhalo.centrals[self.subhalo_indices]
+        ind_in_subhalo = np.nonzero(self.subhalo_indices >= 0)[0]
+        self.subhalo_indices[ind_in_subhalo] = (
+            self.subhaloes.centrals[self.subhalo_indices[ind_in_subhalo]])
 
-    def initialize_memberships_from_fof():
+    def initialize_memberships_from_fof(self):
         """Initialize particle membership to centrals from FOF groups."""
         # Find the central from FOF IDs
-        cen_gal_fof = self.subhalo.fof_to_central[self.fof_ids]
+        cen_gal_fof = self.subhaloes.fof_to_central[self.fof_ids]
 
         # Special treatment for particles that are in a galaxy but not in a FOF
         ind_gal_nofof = np.nonzero(
             (self.subhalo_indices >= 0) & (subhalo_indices < 0))[0]
         cen_gal_nofof = (
-            self.subhalo.centrals[self.subhalo_indices[ind_gal_nofof]])
+            self.subhaloes.centrals[self.subhalo_indices[ind_gal_nofof]])
 
         # Update internal subhalo_indices list (can only do it now, because we
         # needed the original indices for no-FOF-galaxies)
         self.subhalo_indices = cen_gal_fof
         self.subhalo_indices[ind_gal_nofof] = cen_gal_nofof
 
+    def get_ids_in_sphere(self, cen, r, cen_sh):
+        """Find the particle IDs within a sphere."""
+        if not hasattr(self, 'tree'):
+            boxsize = self.snapshot.sim.boxsize
+            self.tree = cKDTree(
+                self.coordinates, boxsize=boxsize, leafsize=1024)
+        ind_ngbs = self.tree.query_ball_point(cen, r)
+        ind_ngbs = np.array(ind_ngbs)
 
+        ngb_cens = self.subhaloes.centrals[self.subhalo_indices[ind_ngbs]]
+        subind = np.nonzero(ngb_cens == cen_sh)[0]
+        return self.ids[ind_ngbs[subind]]
+
+    def update_membership(self, galaxy_particles, galaxy):
+        """Incorporate unbinding result into the particle catalogue."""
+
+        ish = galaxy.ish
+        subhaloes = galaxy.subhaloes
+        boxsize = subhaloes.sim.boxsize
+        
+        bound_inds = galaxy.source_indices[galaxy_particles.ind_bound]
+        bound_origins = galaxy_particles.origins[galaxy_particles.ind_bound]
+        bound_dpos = (
+            self.coordinates[bound_inds, :]
+            - subhaloes.new_coordinates[ish, :]
+        )
+        tools.periodic_wrapping(bound_dpos, boxsize)
+        bound_radii = np.linalg.norm(bound_dpos, axis=1)
+
+        old_origins = self.origins[bound_inds]
+        old_radii = self.radii[bound_inds]
+
+        ind_better = np.nonzero(
+            (bound_origins < old_origins) |
+            ((bound_origins == old_origins) & (bound_radii < old_radii))
+        )[0]
+
+        # Record the result
+        self.origins[bound_inds[ind_better]] = bound_origins[ind_better]
+        self.radii[bound_inds[ind_better]] = bound_radii[ind_better]
+        self.subhalo_indices[bound_inds[ind_better]] = ish
+        
+    
 class GalaxyParticles(ParticlesBase):
 
     def __init__(self, galaxy):
         self.num_part = None
+        self.galaxy = galaxy
+        self.snap = galaxy.snap
+        self.verbose = self.snap.verbose
 
     def check_number_consistency(self, quant):
         """Check that the number of elements agrees with internal size."""
@@ -228,29 +305,76 @@ class GalaxyParticles(ParticlesBase):
         self.check_number_consistency(m)
         self.m = m.astype(np.float32)
 
+    def set_m_real(self, m):
+        self.check_number_consistency(m)
+        self.m_real = m.astype(np.float32)
+        
     def set_u(self, u):
         self.check_number_consistency(u)
         self.u = u.astype(np.float32)
 
+    def set_origins(self, origins):
+        self.check_number_consistency(origins)
+        self.origins = origins
+        
+    def set_initial_status(self):
+        self.initial_status = np.zeros(self.num_part, dtype=np.int32) + 1
+    
     def unbind(self):
         """Perform the unbinding procedure on the stored particles."""
 
         # Set here any non-standard MONK parameters.
         # TODO: import params from parameters
-        monk_params = {}
+        monk_params = {'Bypass': False, 'UseTree': 0, 'ReturnBE': 0}
 
-        ind_bound, binding_energies = unbinding.unbind_source(
-            self.r, self.v, self.m, self.u, self.initial_status,
-            self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
-            monk_params
-        )
+        iit = 0
+        while True:
 
-        # Also need to record unbinding result...
-        self.ind_bound = ind_bound
+            print(f"\n\nMONK iteration {iit}!")
+            n_tot = len(self.m)
+            n_passive = np.count_nonzero(self.m == 0)
+            print(
+                f"There are {n_passive} passive particles out of {n_tot}.\n\n")
+            ind_bound = unbinding.unbind_source(
+                self.r, self.v, self.m, self.u,
+                self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
+                status=self.initial_status, params=monk_params
+            )
+            
+            # Also need to record unbinding result...
+            self.ind_bound = ind_bound
+            
+            if self.verbose:
+                for iorigin in range(6):
+                    n_source = np.count_nonzero(self.origins == iorigin)
+                    n_final = np.count_nonzero(
+                        self.origins[ind_bound] == iorigin)
+                    print(f"Origin {iorigin}: {n_source} --> {n_final}")
+        
+            # Check how many passive particles ended up becoming bound
+            n_passive_bound = np.count_nonzero(self.m[ind_bound] == 0)
+            if n_passive_bound > 0.05 * len(ind_bound):
+                print(f"WARNIING: {n_passive_bound} / {len(ind_bound)} bound "
+                      f"particles are passive!")
 
-        # Find the coordinates of the most bound particle, to be returned
-        ind_mostbound = np.argmin(binding_energies[ind_bound])
-        halo_centre_of_potential = self.r[ind_bound[ind_mostbound], :]
+                self.m = np.array(self.m_real, copy=True)
+                bound_flag = np.zeros(len(self.m), dtype=int)
+                bound_flag[ind_bound] = 1
+                ind_unbound = np.nonzero(bound_flag == 0)[0]
+                self.m[ind_unbound] = 0
 
+                iit += 1
+                if iit > 20: set_trace()
+                
+            else:
+                break
+                
+        # Find the coordinates of the 'most bound' (lowest PE) particle,
+        # to be returned. This is easy because MONK internally moves this
+        # particle to the front of the returned list.
+        ind_mostbound = ind_bound[0]
+        halo_centre_of_potential = self.r[ind_mostbound, :]
+        
         return halo_centre_of_potential
 
+        
