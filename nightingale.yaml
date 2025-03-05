@@ -104,6 +104,8 @@ Input:
     ParticleVelocities: Velocities
     ParticleInternalEnergies: InternalEnergies
 
+  LoadWaitlist: False
+
   # Include bondary particles (only useful for testing, not in SF catalogues)
   IncludeBoundary:    False      
                                  
@@ -166,6 +168,7 @@ Output:
   Directory:       '/cosma8/data/dp004/dc-bahe1/'
   CatalogueName:   'Nightingale_XXXX.hdf5'
   IDFileName:      'Nightingale_XXXX_IDs.hdf5'
+  WaitlistIDFileName: 'Nightingale_XXXX_Waitlist-IDs.hdf5'
 
   # File to write output to
   File:      'CantorCatalogue_5Aug19.hdf5'

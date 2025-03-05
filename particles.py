@@ -398,7 +398,6 @@ class GalaxyParticles(ParticlesBase):
         # TODO: import params from parameters
         monk_params = {'Bypass': False, 'UseTree': 0, 'ReturnBE': 0}
 
-        print(f"\n\nMONK iteration {iit}!")
         n_tot = len(self.m)
         n_passive = np.count_nonzero(self.m == 0)
         print(

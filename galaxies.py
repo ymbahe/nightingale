@@ -445,7 +445,7 @@ class TargetGalaxy(GalaxyBase):
             origins = np.concatenate((origins, np.zeros(len(l4_ids)) + 4))
 
         # Level 5: particles from the last snapshot's 'waiting list'
-        if include_l5:
+        if include_l5 and self.par['Input']['LoadWaitlist']:
             l5_ids = prior_subhaloes.find_galaxy_waitlist_ids(self.igal)
             ids = np.concatenate((ids, l5_ids))
             origins = np.concatenate((origins, np.zeros(len(l5_ids)) + 5))
