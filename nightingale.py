@@ -95,7 +95,7 @@ def main():
         subhaloes.register_new_coordinates(ish, final_subhalo_coords)
         
         # Update full particle membership
-        particles.update_membership(galaxy_particles)
+        particles.update_membership(galaxy_particles, galaxy)
 
     # All subhaloes are processed now, and `particles` contains their final
     # membership information. Update subhalo coordinates in the catalogue.

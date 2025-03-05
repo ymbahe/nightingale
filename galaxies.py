@@ -263,7 +263,6 @@ class SnapshotGalaxies(GalaxyBase):
         if self.verbose:
             print(f"Updating coordinates for {len(ind_update)} out of "
                   f"{self.n_input_subhaloes} subhaloes.")
-                  f"{self.n_subhaloes} subhaloes.")
         self.coordinates[ind_update, :] = self.new_coordinates[ind_update, :]
 
         # We don't need the new coordinates anymore, so we can free memory

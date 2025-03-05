@@ -77,7 +77,7 @@ class Output:
             'IDs': io_comments.ids_comments
         }
 
-    def assign_subhalo_ids(input_indices, masses)
+    def assign_subhalo_ids(input_indices, masses):
         """Establish the output order of subhaloes.
         
         All galaxies to be included in the output are sorted, first by
@@ -316,7 +316,7 @@ class Output:
         
         # Subhalo --> FOF
         hdf5.write_data(
-            file_name, grp + 'FOF', self.subhalo['FOFIndices']
+            file_name, grp + 'FOF', self.subhalo['FOFIndices'],
             comment = "Index of the FOF group to which this subhalo "
             "belongs. Note that this may not be a real FOF group, as "
             "specified by FOFFlags."
@@ -331,7 +331,8 @@ class Output:
             "by Nightingale."
         )
         hdf5.write_data(
-            file_name, grp + 'IndexByInputHalo', self.output_shi_from_input_shi, 
+            file_name, grp + 'IndexByInputHalo',
+            self.output_shi_from_input_shi, 
             comment = "Reverse index to identify the subhalo "
             "corresponding to a given input subhalo. To find "
             "the (Nightingale) subhalo corresponding to "
@@ -352,7 +353,7 @@ class Output:
         )
         hdf5.write_data(
             file_name, grp + 'NumberOfParticles',
-            self.subhaloes['NumberOfParticles'] 
+            self.subhaloes['NumberOfParticles'] ,
             comment = "Number of particles in ID list belonging "
             "to subhalo i. The particles belonging to this subhalo "
             "are stored in indices [offset]:[offset]+[length]."
