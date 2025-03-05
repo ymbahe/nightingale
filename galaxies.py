@@ -244,10 +244,12 @@ class SnapshotGalaxies(GalaxyBase):
         on the processing order of subhaloes.
         """
         self.new_coordinates = np.zeros((self.n_input_subhaloes, 3)) - 1
+        self.m_bound_after_unbinding = np.zeros(self.n_input_subhaloes)
 
-    def register_new_coordinates(self, ish, new_coordinates):
+    def register_unbinding_result(self, ish, new_coordinates, bound_mass):
         """Register the updated coordinates from unbinding."""
         self.new_coordinates[ish, :] = new_coordinates
+        self.m_bound_after_unbinding[ish] = bound_mass
 
     def register_new_velocities(self, ish, new_velocities):
         """Register the updated velocities from unbinding."""

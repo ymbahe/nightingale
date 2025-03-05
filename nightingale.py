@@ -91,8 +91,8 @@ def main():
         galaxy_particles = galaxy.find_source_particles()
         
         # Perform gravitational unbinding
-        final_subhalo_coords = galaxy_particles.unbind()
-        subhaloes.register_new_coordinates(ish, final_subhalo_coords)
+        final_subhalo_coords, m_bound = galaxy_particles.unbind()
+        subhaloes.register_unbinding_result(ish, final_subhalo_coords, m_bound)
         
         # Update full particle membership
         particles.update_membership(galaxy_particles, galaxy)

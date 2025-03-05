@@ -398,29 +398,26 @@ class GalaxyParticles(ParticlesBase):
         # TODO: import params from parameters
         monk_params = {'Bypass': False, 'UseTree': 0, 'ReturnBE': 0}
 
-        iit = 0
-        while True:
-
-            print(f"\n\nMONK iteration {iit}!")
-            n_tot = len(self.m)
-            n_passive = np.count_nonzero(self.m == 0)
-            print(
-                f"There are {n_passive} passive particles out of {n_tot}.\n\n")
-            ind_bound = unbinding.unbind_source(
-                self.r, self.v, self.m, self.u,
-                self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
-                status=self.initial_status, params=monk_params
-            )
-            
-            # Also need to record unbinding result...
-            self.ind_bound = ind_bound
-            
-            if self.verbose:
-                for iorigin in range(6):
-                    n_source = np.count_nonzero(self.origins == iorigin)
-                    n_final = np.count_nonzero(
-                        self.origins[ind_bound] == iorigin)
-                    print(f"Origin {iorigin}: {n_source} --> {n_final}")
+        print(f"\n\nMONK iteration {iit}!")
+        n_tot = len(self.m)
+        n_passive = np.count_nonzero(self.m == 0)
+        print(
+            f"There are {n_passive} passive particles out of {n_tot}.\n\n")
+        ind_bound = unbinding.unbind_source(
+            self.r, self.v, self.m, self.u,
+            self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
+            status=self.initial_status, params=monk_params
+        )
+        
+        # Also need to record unbinding result...
+        self.ind_bound = ind_bound
+        
+        if self.verbose:
+            for iorigin in range(6):
+                n_source = np.count_nonzero(self.origins == iorigin)
+                n_final = np.count_nonzero(
+                    self.origins[ind_bound] == iorigin)
+                print(f"Origin {iorigin}: {n_source} --> {n_final}")
         
             # Check how many passive particles ended up becoming bound
             n_passive_bound = np.count_nonzero(self.m[ind_bound] == 0)
@@ -428,24 +425,14 @@ class GalaxyParticles(ParticlesBase):
                 print(f"WARNIING: {n_passive_bound} / {len(ind_bound)} bound "
                       f"particles are passive!")
 
-                self.m = np.array(self.m_real, copy=True)
-                bound_flag = np.zeros(len(self.m), dtype=int)
-                bound_flag[ind_bound] = 1
-                ind_unbound = np.nonzero(bound_flag == 0)[0]
-                self.m[ind_unbound] = 0
-
-                iit += 1
-                if iit > 20: set_trace()
-                
-            else:
-                break
                 
         # Find the coordinates of the 'most bound' (lowest PE) particle,
         # to be returned. This is easy because MONK internally moves this
         # particle to the front of the returned list.
         ind_mostbound = ind_bound[0]
         halo_centre_of_potential = self.r[ind_mostbound, :]
-        
-        return halo_centre_of_potential
 
+        # Compute the total bound mass after the end of MONK
+        m_bound_after_monk = np.sum(self.m[ind_bound])
         
+        return halo_centre_of_potential, m_bound_after_monk
