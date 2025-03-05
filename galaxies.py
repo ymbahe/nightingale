@@ -171,6 +171,10 @@ class SnapshotGalaxies(GalaxyBase):
         """Register the updated coordinates from unbinding."""
         self.new_coordinates[ish, :] = new_coordinates
 
+    def register_new_velocities(self, ish, new_velocities):
+        """Register the updated velocities from unbinding."""
+        self.new_velocities[ish, :] = new_velocities
+
     def update_coordinates(self):
         """Update the subhalo coordinates with newly computed ones.
 
@@ -182,10 +186,19 @@ class SnapshotGalaxies(GalaxyBase):
             print(f"Updating coordinates for {len(ind_update)} out of "
                   f"{self.n_subhaloes} subhaloes.")
         self.coordinates[ind_update, :] = self.new_coordinates[ind_update, :]
+        self.velocities[ind_update, :] = self.new_velocities[ind_update, :]
 
         # We don't need the new coordinates anymore, so we can free memory
         del self.new_coordinates
+        del self.new_velocities
 
+    def get_coordinates(self, shi):
+        """Retrieve the (updated) coordinates for input subhalo[es]."""
+        return self.coordinates[shi, :]
+
+    def get_velocities(self, shi):
+        """Retrieve the (updated) velocities for input subhalo[es]."""
+        return self.velocities[shi, :]
 
 class TargetGalaxy(GalaxyBase):
 
