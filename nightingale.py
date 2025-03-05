@@ -86,16 +86,23 @@ def main():
     # membership information. Update subhalo coordinates in the catalogue.
     subhaloes.update_coordinates()
 
+    # Get rid of any particles that are not bound
+    particles.reject_unbound()
+
+
     # ----------------------------------------------------------------------
 
     # Almost done -- hand over to output handling...
     output = Output(par, targetSnap, subhaloes, particles)
 
-    # Process the particle-subhalo links for output
-    output.process_subhaloes_and_membership()
+    # Trim the particle list to only include those in identified subhaloes
+    particles.switch_memberships_to_output(output.output_shi_from_input_shi)
 
-    # Compute any quantities beyond pure subhalo-->particle assignments
-    output.compute_secondary_quantities()
+    # Compute the core subhalo properties: particle membership and position
+    output.prepare()
+
+    # Compute what we want to know
+    output.compute_output_quantities()
 
     # Write output
     output.write()
