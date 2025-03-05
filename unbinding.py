@@ -5,9 +5,10 @@ Started 17 Feb 2025.
 
 import numpy as np
 import monk
+from pdb import set_trace
 
 def unbind_source(
-    r, v, m, u, status=None, rhalo_init, vhalo_init, hubble_z, params={}):
+    r, v, m, u, rhalo_init, vhalo_init, hubble_z, status=None, params={}):
     """
     Run MONK to reduce input particles to their self-bound subset.
 
@@ -113,21 +114,24 @@ def unbind_source(
     elif status.dtype != np.int32:
         status = status.astype(np.int32)
 
-    # Debugging/testing option that completely bypasses MONK:
-    if par['Monk']['Bypass']:
-        ind_bound = np.arange(n_part, dtype=int)
-        return ind_bound
-
     # Check params dict and supply defaults if need be
     defaults = [
         ('FixCentre', 0), ('CentreMode', 0), ('CentreFrac', 0.1),
         ('Monotonic', 1), ('ResLimit', 7e-4), ('PotErrTol', 1.0),
         ('UseTree', 1), ('ReturnBE', 1), ('Tolerance', 0.005),
-        ('Verbose', 0)
+        ('Verbose', 0), ('Bypass', 0)
     ]
     for pair in defaults:
         if pair[0] not in params:
             params[pair[0]] = pair[1]
+
+    # TEST
+    params['Verbose'] = 0
+            
+    # Debugging/testing option that completely bypasses MONK:
+    if params['Bypass']:
+        ind_bound = np.arange(n_part, dtype=int)
+        return ind_bound
 
     # Call MONK to find bound particles:
     # (Disable maxGap as removed from code)
@@ -141,7 +145,7 @@ def unbind_source(
         params['UseTree'],      # Mode (exact [0] or tree [1])
         params['Monotonic'],    # Monotonic unbinding [1]?
         params['Tolerance'],    # Tolerance
-        -1,                     # maxGap (removed from MONK code)
+        20,                     # Points per leaf
         params['FixCentre'],    # fixCentre
         params['CentreMode'],   # centreMode
         params['CentreFrac'],   # centreFrac

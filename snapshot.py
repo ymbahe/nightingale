@@ -5,7 +5,9 @@ Started 17 Feb 2025.
 
 import numpy as np
 import ioi
-import io
+import ion
+import cosmo
+from pdb import set_trace
 
 class Snapshot:
     """Hold and process snapshot-level information."""  
@@ -13,8 +15,12 @@ class Snapshot:
     def __init__(self, sim, offset=0):
         self.sim = sim
         self.par = sim.par
+        self.verbose = self.par['Verbose']
 
-        self.isnap = par['Sim']['Snapshot'] + offset
+        self.isnap = self.par['Sim']['Snapshot'] + offset
+        if self.isnap < 0:
+            return
+
         self.offset = offset
 
         self.redshift = sim.redshifts[self.isnap]
@@ -33,7 +39,7 @@ class Snapshot:
         print(f"Finished initialization of snapshot {self.isnap}.")
         print(f"Redshift = {self.redshift:.2f}, H(z) = {self.hubble_z:.2f} "
               f"km/s/Mpc")
-
+        
     def set_input_file_names(self):
         """Form all input file names relevant to this snapshot."""
         isnap = self.isnap
@@ -42,11 +48,12 @@ class Snapshot:
         self.snapshot_file = ioi.form_snapshot_file(par, isnap)
         self.subhalo_file = ioi.form_subhalo_file(par, isnap)
         self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
-        self.subhalo_membership_file = ioi.form_subhalo_membership_file(
+        #self.subhalo_membership_file = ioi.form_subhalo_membership_file(
+        #    par, isnap)
+        
+        self.nightingale_property_file = ion.form_nightingale_property_file(
             par, isnap)
-        self.nightingale_property_file = io.form_nightingale_property_file(
-            par, isnap)
-        self.nightingale_id_file = io.form_nightingale_id_file(par, isnap)
+        self.nightingale_id_file = ion.form_nightingale_id_file(par, isnap)
 
         if self.par['Verbose']:
             print(f"Set file names for snapshot {isnap}:")

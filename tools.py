@@ -7,6 +7,8 @@ import hdf5
 import os
 import subprocess
 import re
+import numpy as np
+from pdb import set_trace
 
 def dict2att(dictIn, outloc, container='Header', pre='',
              bool_as_int=True):
@@ -230,6 +232,57 @@ class SplitList:
         return self.argsort[self.splits[index]:self.splits[index+1]]
 
 def key_to_attribute_name(key):
-    """Convert the CamelCase name of a key to snake_case for attribute use."""
-    name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+    """Convert the CamelCase name of a key to snake_case for attribute use.
+
+    Taken from https://stackoverflow.com/questions/1175208.
+    """
+    if 'IDs' in key:
+        key = key.replace('IDs', 'Ids')
+
+    pattern = re.compile(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+    name = pattern.sub('_', key).lower()
+
+    print(f"Converted '{key}' to '{name}'")
     return name
+
+
+def periodic_wrapping(r, boxsize, return_copy=False, mode='centre'):
+    """
+    Apply periodic wrapping to an input set of coordinates. 
+    
+    Parameters
+    ----------
+    r : ndarray(float) [N, 3] 
+        The coordinates to wrap.
+    boxsize : float                                               
+        The box size to wrap the coordinates to. The units must correspond to
+        those used for `r`. 
+    return_copy : bool, optional
+        Switch to return a (modified) copy of the input array, rather than
+        modifying the input in place (which is the default).      
+    mode : string, optional                    
+        Specify whether coordinates should be wrapped to within -0.5 --> 0.5
+        times the boxsize ('centre', default) or 0 --> 1 boxsize ('corner').
+    
+    Returns
+    -------
+    r_wrapped : ndarray(float) [N, 3]
+        The wrapped coordinates. Only returned if `return_copy` is True,    
+        otherwise the input array `r` is modified in-place.
+    """
+    if mode in ['centre', 'center']:
+        shift = 0.5 * boxsize
+    elif mode in ['corner']:
+        shift = 0.0
+    else:
+        raise ValueError(f'Invalid wrapping mode "{mode}"!')
+    
+    if return_copy:
+        r_wrapped = ((r + shift) % boxsize - shift)
+        return r_wrapped
+
+    # To perform the wrapping in-place, break it down into three steps
+    r += shift
+    r %= boxsize
+    r -= shift
+    
