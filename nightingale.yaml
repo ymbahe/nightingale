@@ -33,7 +33,7 @@ Sources:
   # Include particles within a given radius of the input halo centre? 
   Neighbours:   True
   RadiusType:   'EncloseRadius'
-  ExtentFactor: 1.5
+  ExtentFactor: 2.0
 
   # Particles that were in the galaxy in the previous snapshot?
   Prior:     True     # Default: True

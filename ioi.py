@@ -50,7 +50,7 @@ def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
     if with_descendants:
         names.append(('DescendantGalaxyIDs', 'DescendantTrackId'))
     if par['Sources']['Neighbours']:
-        names.append(('Radii', 'REncloseComoving'))
+        names.append(('Radii', 'RHalfComoving'))
 
     return names
 
