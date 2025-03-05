@@ -16,4 +16,6 @@ def compute_hubble_z(redshift):
     print(f"Determined H(z) = {hubble_z.value:.2f} km/s/Mpc.")
     return hubble_z.value
 
- 
+
+def compute_softening_length(redshift):
+    return 0.0007
