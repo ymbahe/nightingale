@@ -186,13 +186,3 @@ def load_subhalo_particles_external(subhalo_particle_file, base_indices=None):
         ids = ids[base_indices]
     return ids
 
-def load_subhalo_particles_nightingale(property_file, id_file):
-    with h5.File(property_file, 'r') as f:
-        offsets = f['Subhalo/Offset'][...]
-        lengths = f['Subhalo/Lengths'][...]
-    with h5.File(id_file, 'r') as f:
-        ids = f['IDs'][...]
-
-    # TO DO: CONVERT OFFSET-SEPARATED LIST TO NESTED ARRAY...
-
-    return ids      

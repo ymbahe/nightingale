@@ -83,6 +83,13 @@ class SnapshotGalaxies(GalaxyBase):
             self.particle_ids = ioi.load_subhalo_particles_external(
                 particle_file, self.subhalo_ids_for_base_haloes)
 
+        # Load the particle IDs from the 'wait list' if we need to and
+        # if this is the prior snapshot (offset == -1)
+        if self.snap.offset == -1 and self.par['Input']['LoadWaitlist']:
+            waitlist_file = self.snap.nightingale_waitlist_file
+            self.waitlist_particle_ids = (
+                ion.load_waitlist_particles_nightingale(waitlist_file))
+
     def initialize_progenitor_list(self):
         """Initialise the lookup list for progenitors of each galaxy."""
         max_desc_id = np.max(self.descendant_galaxy_ids)
@@ -197,6 +204,15 @@ class SnapshotGalaxies(GalaxyBase):
     def find_subhalo_particle_ids(self, ish):
         """Find particle IDs for a specified subhalo."""
         return self.particle_ids[ish]
+
+    def find_galaxy_waitlist_ids(self, igal):
+        """Find particle IDs that are on the waitlist for a given galaxy."""
+        ish = self.subhalo_from_galaxy(igal)
+        return self.find_waitlist_particle_ids(ish)
+
+    def find_waitlist_particle_ids(self, ish):
+        """Retrieve the waitlist particle IDs for a given subhalo."""
+        return self.waitlist_particle_ids[ish]
 
     def find_top_level_parents(self):
         """Find the top-level parent subhalo for all subhaloes."""
@@ -393,6 +409,7 @@ class TargetGalaxy(GalaxyBase):
         include_l3 = True
         include_l4 = True
         include_l5 = True
+        include_l6 = True
         
         origins = np.zeros(0, dtype=int)
         ids = np.zeros(0, dtype=np.uint64)
@@ -427,18 +444,24 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l4_ids))
             origins = np.concatenate((origins, np.zeros(len(l4_ids)) + 4))
 
-        # Level 5: particles that are within a certain multiple of the
-        # maximum (input) subhalo extent
+        # Level 5: particles from the last snapshot's 'waiting list'
         if include_l5:
-            r_max = subhaloes.get_maximum_extent(self.ish)
-            subhalo_cen = subhaloes.get_subhalo_coordinates(self.ish)
-            cen_sh = self.subhaloes.centrals[self.ish]
-            l5_ids = particles.get_ids_in_sphere(subhalo_cen, r_max, cen_sh)
+            l5_ids = prior_subhaloes.find_galaxy_waitlist_ids(self.igal)
             ids = np.concatenate((ids, l5_ids))
             origins = np.concatenate((origins, np.zeros(len(l5_ids)) + 5))
 
-            if len(l5_ids) > 0.8 * len(ids):
-                print(f"WARNING: {len(l5_ids)} L5!")
+        # Level 6: particles that are within a certain multiple of the
+        # (input) subhalo half-mass radius
+        if include_l6:
+            r_max = subhaloes.get_maximum_extent(self.ish)
+            subhalo_cen = subhaloes.get_subhalo_coordinates(self.ish)
+            cen_sh = self.subhaloes.centrals[self.ish]
+            l6_ids = particles.get_ids_in_sphere(subhalo_cen, r_max, cen_sh)
+            ids = np.concatenate((ids, l6_ids))
+            origins = np.concatenate((origins, np.zeros(len(l6_ids)) + 6))
+
+            if len(l6_ids) > 0.8 * len(ids):
+                print(f"WARNING: {len(l6_ids)} L6!")
                 set_trace()
             
         # Level 6: particles that, in the prior snapshot, belonged to a

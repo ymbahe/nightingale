@@ -13,6 +13,41 @@ def form_nightingale_id_file(par, isnap):
     id_name = id_name.replace('XXXX', f'{isnap:04d}')
     return par['Output']['Directory'] + id_name
 
+def form_nightingale_waitlist_file(par, isnap):
+    """Form the waitlist ID file name for a given snapshot."""
+    file_name = par['Output']['WaitlistIDFileName']
+    file_name = file_name.replace('XXXX', f'{isnap:04d}')
+    return par['Output']['Directory'] + file_name
+
+def load_subhalo_particles_nightingale(property_file, id_file):
+    with h5.File(property_file, 'r') as f:
+        offsets = f['Subhalo/Offset'][...]
+        lengths = f['Subhalo/Lengths'][...]
+    with h5.File(id_file, 'r') as f:
+        ids = f['IDs'][...]
+
+    n_subhaloes = len(lengths)
+    ids_all = []
+    for ish in range(n_subhaloes):
+        ids_sh = ids[offsets[ish] : offsets[ish] + lengths[ish]]
+        ids_all.append(ids_sh)
+
+    return ids_all
+
+def load_waitlist_particles_nightingale(waitlist_file):
+    """Load the particle IDs from the waiting list."""
+    with h5.file(waitlist_file, 'r') as f:
+        offsets = f['Offset'][...]
+        ids = f['IDs'][...]
+
+    waitlist = []
+    n_subhaloes = len(offsets) - 1
+    for ish in range(n_subhaloes):
+        ids_sh = ids[offsets[ish] : offsets[ish+1]]
+        waitlist.append(ids_sh)
+
+    return waitlist
+
 class Output:
     """Class for storing and writing one snapshot's output from Nightingale."""
     def __init__(self, par, snapshot, subhaloes, particles):

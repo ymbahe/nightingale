@@ -54,6 +54,8 @@ class Snapshot:
         self.nightingale_property_file = ion.form_nightingale_property_file(
             par, isnap)
         self.nightingale_id_file = ion.form_nightingale_id_file(par, isnap)
+        self.nightingale_waitlist_file = ion.form_nightingale_waitlist_file(
+            par, isnap)
 
         if self.par['Verbose']:
             print(f"Set file names for snapshot {isnap}:")
