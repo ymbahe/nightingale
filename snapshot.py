@@ -20,6 +20,8 @@ class Snapshot:
         self.redshift = sim.redshifts[self.isnap]
         self.aexp = sim.aexps[self.isnap]
 
+        self.epsilon = cosmo.compute_softening_length(self.redshift)
+
         # Compute Hubble parameter for this snapshot.
         self.hubble_z = cosmo.compute_hubble_z(self.redshift)
         if self.par['Check']['NoHubble']:
