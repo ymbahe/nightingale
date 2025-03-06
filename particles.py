@@ -10,6 +10,7 @@ from scipy.spatial import cKDTree
 
 import tools
 import unbinding
+import ion
 
 class ParticlesBase:
 
@@ -282,19 +283,19 @@ class SnapshotParticles(ParticlesBase):
         
     def filter_out_waitlist(self):
         """Filter out and reset particles that are on the wait list."""
-        ind_waitlist = np.nonzero(self.subhalo_indices == 6)[0]
+        ind_waitlist = np.nonzero(self.origins == 6)[0]
         waitlist_split = tools.SplitList(
             self.subhalo_indices[ind_waitlist],
             np.arange(self.subhaloes.n_input_subhaloes + 1)
         )
 
         n_sh = self.subhaloes.n_input_subhaloes
-        offsets = np.zeros(n_sh, dtype=int)
+        offsets = np.zeros(n_sh + 1, dtype=int)
         ids = np.zeros(len(ind_waitlist), dtype=np.uint64) - 1
 
         curr_offset = 0
         for ish in range(n_sh):
-            inds_sh = waitlist_split(ish)
+            inds_sh = ind_waitlist[waitlist_split(ish)]
             ids_sh = self.ids[inds_sh]
             n_ids_sh = len(ids_sh)
             offsets[ish + 1] = curr_offset + n_ids_sh
@@ -322,9 +323,9 @@ class SnapshotParticles(ParticlesBase):
         ind_in_subhalo = np.nonzero(self.subhalo_indices >= 0)[0]
         n_now = len(ind_in_subhalo)
         print(f"About to reject unbound particles ({n_before} to {n_now}).")
-        update_particle_fields(ind_in_subhalo)
+        self.update_particle_fields(ind_in_subhalo)
 
-    def update_particle_fields(source_indices):
+    def update_particle_fields(self, source_indices):
         """Re-arrange the particle fields by pulling from source_indices."""
 
         # Record current particle numbers and check that they are ok
@@ -335,19 +336,19 @@ class SnapshotParticles(ParticlesBase):
             set_trace()
 
         # Re-arrange the data fields
-        self.ids = self.ids[ind_in_subhalo]
-        self.ptypes = self.ptypes[ind_in_subhalo]
-        self.masses = self.masses[ind_in_subhalo]
-        self.coordinates = self.coordinates[ind_in_subhalo, :]
-        self.velocities = self.velocities[ind_in_subhalo, :]
-        self.internal_energies = self.internal_energies[ind_in_subhalo]
-        self.subhalo_indices = self.subhalo_indices[ind_in_subhalo]
+        self.ids = self.ids[source_indices]
+        self.ptypes = self.ptypes[source_indices]
+        self.masses = self.masses[source_indices]
+        self.coordinates = self.coordinates[source_indices, :]
+        self.velocities = self.velocities[source_indices, :]
+        self.internal_energies = self.internal_energies[source_indices]
+        self.subhalo_indices = self.subhalo_indices[source_indices]
 
         # Re-calculate number of particles by type
         self.n_pt = np.bincount(self.ptypes, minlength=6)
         n_part_now = np.sum(self.n_pt)
 
-        print(f"Updated particle fields ({n_before} --> {n_now}).")
+        print(f"Updated particle fields ({n_part_before} --> {n_part_now}).")
         for pt in range(6):
             print(f"   PartType {pt}: {n_pt_before[pt]} --> {self.n_pt[pt]}")
 
@@ -370,7 +371,7 @@ class SnapshotParticles(ParticlesBase):
             print("Why are there unbound particles??")
             set_trace()
         sorter = np.lexsort((self.radii, self.subhalo_indices))
-        update_particle_fields(sorter)
+        self.update_particle_fields(sorter)
 
 
 class GalaxyParticles(ParticlesBase):
@@ -423,12 +424,13 @@ class GalaxyParticles(ParticlesBase):
 
         # Set here any non-standard MONK parameters.
         # TODO: import params from parameters
-        monk_params = {'Bypass': False, 'UseTree': 0, 'ReturnBE': 0}
+        monk_params = {'Bypass': False, 'UseTree': 1, 'ReturnBE': 0}
 
         n_tot = len(self.m)
         n_passive = np.count_nonzero(self.m == 0)
         print(
-            f"There are {n_passive} passive particles out of {n_tot}.\n\n")
+            f"Now unbinding subhalo {self.galaxy.ish}.\n"
+            f"There are {n_passive} passive particles out of {n_tot}...")
         ind_bound = unbinding.unbind_source(
             self.r, self.v, self.m, self.u,
             self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
@@ -439,7 +441,7 @@ class GalaxyParticles(ParticlesBase):
         self.ind_bound = ind_bound
         
         if self.verbose:
-            for iorigin in range(6):
+            for iorigin in range(7):
                 n_source = np.count_nonzero(self.origins == iorigin)
                 n_final = np.count_nonzero(
                     self.origins[ind_bound] == iorigin)

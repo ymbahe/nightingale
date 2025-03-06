@@ -285,7 +285,6 @@ class SnapshotGalaxies(GalaxyBase):
 
         # We don't need the new coordinates anymore, so we can free memory
         del self.new_coordinates
-        del self.new_velocities
 
     def get_coordinates(self, shi):
         """Retrieve the (updated) coordinates for input subhalo[es]."""

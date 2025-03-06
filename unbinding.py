@@ -145,7 +145,7 @@ def unbind_source(
         params['UseTree'],      # Mode (exact [0] or tree [1])
         params['Monotonic'],    # Monotonic unbinding [1]?
         params['Tolerance'],    # Tolerance
-        20,                     # Points per leaf
+        10,                     # Points per leaf
         params['FixCentre'],    # fixCentre
         params['CentreMode'],   # centreMode
         params['CentreFrac'],   # centreFrac
