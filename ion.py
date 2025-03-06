@@ -1,5 +1,9 @@
 """Nightingale-specific IO"""
 
+import h5py as h5
+import numpy as np
+from pdb import set_trace
+
 def form_nightingale_property_file(par, isnap):
     """Form the property file name for a given snapshot."""
     catalogue_name = par['Output']['CatalogueName']
@@ -72,10 +76,10 @@ class Output:
         self.simulation = snapshot.sim
         self.input_sub = subhaloes
         self.particles = particles
-        self.n_input_subhaloes = subhaloes.n_subhaloes
+        self.n_input_subhaloes = subhaloes.n_input_subhaloes
 
         # Work out where to eventually write the output
-        self.file = self.construct_output_file()
+        self.file = self.construct_output_files()
 
         # Work out which input subhaloes are "detected" (=in output)
         ind_found, mass_found = self.find_detected_subhaloes()
