@@ -97,6 +97,9 @@ def main():
         # Update full particle membership
         particles.update_membership(galaxy_particles, galaxy)
 
+    # Filter out 'waitlist' particles
+    particles.filter_out_waitlist()
+
     # All subhaloes are processed now, and `particles` contains their final
     # membership information. Update subhalo coordinates in the catalogue.
     subhaloes.update_coordinates()
