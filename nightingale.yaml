@@ -18,6 +18,7 @@ Sim:
   SubhaloParticleFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   RedshiftsAreAexp: False
   Snapshot: 127
+  Boxsize: 12.5
 
 InputHaloes:
   HBTDir: 'HBTplus'
@@ -103,6 +104,7 @@ Input:
     ParticleCoordinates: Coordinates
     ParticleVelocities: Velocities
     ParticleInternalEnergies: InternalEnergies
+    ParticleFOFIndex: FOFGroupIDs
 
   LoadWaitlist: False
 
@@ -111,7 +113,7 @@ Input:
                                  
   # Load all particles in FOF, including ones that are not in any subhalo
   # (will abort if neither UnbindCensWithSats or UnbindCensAfterSats is set)
-  LoadFullFOF:          False      
+  LoadFullFOF:          True
 
   # Initialize satellite galaxies to centrals?
   # This should only be disabled for testing. If central unbinding is also
@@ -169,9 +171,14 @@ Output:
   CatalogueName:   'Nightingale_XXXX.hdf5'
   IDFileName:      'Nightingale_XXXX_IDs.hdf5'
   WaitlistIDFileName: 'Nightingale_XXXX_Waitlist-IDs.hdf5'
+  ListCentralsFirst: True
+  RecordFinalUnbindingFrame: True
+
+  GalQuantObjectFile: '/cosma/home/dp004/dc-bahe1/repos/GALQUANT/galquant.so'
 
   # File to write output to
-  File:      'CantorCatalogue_5Aug19.hdf5'
+  OutputFile:      'Nightingale_L12N94_XXXX.hdf5'
+  OutputFileIDs:   'Nightingale_IDs_L12N94_XXXX.hdf5'
 
   # Compute and write additional quantities, beyond pure segmentation maps?
   GalaxyProperties:      True               # Default: True
@@ -192,6 +199,7 @@ Output:
   # is not actually in the galaxy
   COPAtUnbinding:         True              # Default: True
 
+  MinimumNumberOfParticles: 10
 
 # Options for unbinding:
 Unbinding:

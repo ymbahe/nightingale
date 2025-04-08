@@ -61,12 +61,26 @@ class SnapshotGalaxies(GalaxyBase):
                 subhalo_file, subhalo_data_names)
         for key in subhalo_data:
             setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
-
+            
         # Build a list pointing directly to the (top-level) parent of each
         # subhalo, i.e. its central.
         self.n_input_subhaloes = len(self.galaxy_ids)
         self.centrals = self.find_top_level_parents()
 
+        # Assign a fake 'FOF' index to unhosted subhaloes
+        ind_unhosted = np.nonzero(self.fof < 0)[0]
+        print(f"There are {len(ind_unhosted)} unhosted subhaloes!")
+        maxfof = np.max(self.fof)
+        subind_central = np.nonzero(
+            self.centrals[ind_unhosted] == ind_unhosted)[0]
+        subind_satellite = np.nonzero(
+            self.centrals[ind_unhosted] != ind_unhosted)[0]
+        self.fof[ind_unhosted[subind_central]] = np.arange(
+            maxfof+1, maxfof+1+len(subind_central))
+        self.fof[ind_unhosted[subind_satellite]] = (
+            self.fof[self.centrals[ind_unhosted[subind_satellite]]])
+        self.maxfof = maxfof
+        
     def load_subhalo_particles(self):
         """Load the full particle list for subhaloes.
 
@@ -150,6 +164,14 @@ class SnapshotGalaxies(GalaxyBase):
             self.set_up_galaxy_to_subhalo_array()
         return self.galaxy_to_subhalo[igal]
 
+    def fof_from_subhalo_index(self, ish):
+        """Get the FOF group for one or more subhalo indices."""
+        fof = self.fof[ish]
+        flag_fof = np.zeros(len(ish), dtype=np.int8)
+        ind_realfof = np.nonzero(fof <= self.maxfof)[0]
+        flag_fof[ind_realfof] = 1
+        return fof, flag_fof
+    
     def galaxy_from_subhalo(self, ish):
         """Find the galaxy ID for a given subhalo index."""
         return self.galaxy_ids[ish]
@@ -332,7 +354,7 @@ class TargetGalaxy(GalaxyBase):
         self.verbose = self.subhaloes.verbose
         self.par = self.sim.par
         self.snap = self.subhaloes.snap
-
+        
         self.r_init = subhaloes.get_subhalo_coordinates(ish)
         self.v_init = subhaloes.get_subhalo_velocity(ish)
         
@@ -345,11 +367,13 @@ class TargetGalaxy(GalaxyBase):
         """
 
         # Convenience pointer to the the full snapshot particle instance
-        particles = self.subhaloes.snap.particles
+        particles = self.snap.particles
 
         # Find the source indices (lots of internal heavy lifting)
         source_inds, origins = self.find_source_indices()
 
+        if len(source_inds) == 0: return None
+        
         # Initialise the particles instance
         source = GalaxyParticles(self)
 
@@ -376,14 +400,16 @@ class TargetGalaxy(GalaxyBase):
         self.source_indices = source_inds
         self.origins = origins
 
-        if np.count_nonzero(origins == 5) > 0.8 * len(origins):
-            with h5.File('HaloTest.hdf5', 'w') as o:
+        #if np.count_nonzero(origins == 5) > 0.8 * len(origins):
+        if self.ish == 1565:
+            with h5.File('HaloTest_1565.hdf5', 'w') as o:
                 o['Masses'] = source_m
                 o['Coordinates'] = source.r
                 o['Velocities'] = source.v
                 o['Energies'] = source.u
                 o['Origins'] = source.origins
-                        
+                o['FOF'] = particles.fof[source_inds]
+
         # It would be a lovely idea to return the result
         return source
         
@@ -461,7 +487,7 @@ class TargetGalaxy(GalaxyBase):
 
             if len(l6_ids) > 0.8 * len(ids):
                 print(f"WARNING: {len(l6_ids)} L6!")
-                set_trace()
+                #set_trace()
             
         # Level 6: particles that, in the prior snapshot, belonged to a
         # galaxy that is now within the same extent as Level 5 particles
@@ -482,6 +508,14 @@ class TargetGalaxy(GalaxyBase):
         # What we really want is the indices into the particle list
         inds = self.subhaloes.snap.particles.ids_to_indices(ids)
 
+        # Restrict the selection to only those particles in the same FOF
+        # group as the target galaxy
+        ind_samefof = np.nonzero(
+            particles.fof[inds] == self.subhaloes.fof[self.ish])[0]
+        inds = inds[ind_samefof]
+        origins = origins[ind_samefof]
+        ids = ids[ind_samefof]
+        
         # Check which IDs are class 0
         ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
         origins[ind_0] = 0

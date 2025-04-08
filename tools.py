@@ -62,9 +62,10 @@ def dict2att(dictIn, outloc, container='Header', pre='',
                 value = int(value)
 
             if isinstance(value, str):
-                value = np.string_(value)
+                pass
+                #value = np.str_(value)
 
-            hdf5.write_hdf5_attribute(
+            hdf5.write_attribute(
                 outloc, container, preOut + key, value)
 
 

@@ -43,7 +43,8 @@ def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
         ('Velocities', 'PhysicalAverageVelocity'),
         ('GalaxyIDs', 'TrackId'),
         ('Depth', 'Depth'),
-        ('NumberOfBoundParticles', 'Nbound')
+        ('NumberOfBoundParticles', 'Nbound'),
+        ('FOF', 'HostHaloId'),
     ]
     if with_parents:
         names.append(('ParentGalaxyIDs', 'NestedParentTrackId'))

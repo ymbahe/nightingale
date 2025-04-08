@@ -6,7 +6,7 @@ Started 17 Feb 2025.
 import h5py as h5
 import numpy as np
 import os
-
+from pdb import set_trace
 
 def test_attribute(file_name, container, attribute):
     """
@@ -128,7 +128,9 @@ def write_attribute(file_name, container, att_name, value,
     if value is None:
         value = np.nan
     if isinstance(value, str):
-        value = np.string_(value)
+        pass
+        #value = np.str_(value)
+        #set_trace()
 
     # Move pre-existing file out of the way if desired
     if new:
@@ -233,9 +235,9 @@ def write_data(file_name, container, array,
     # Write comment if desired (update it if it already exists):
     if comment is not None:
         if 'Comment' in dSet.attrs.keys():
-            dSet.attrs.modify('Comment', np.string_(comment))
+            dSet.attrs.modify('Comment', comment)
         else:
-            dSet.attrs.create('Comment', np.string_(comment))
+            dSet.attrs.create('Comment', comment)
 
     # Close the HDF5 file, and we're done.
     f.close()
@@ -282,7 +284,7 @@ def read_attribute(file_name, container, att_name,
         raise Exception(f"Did not find specified attribute '{att_name}' in "
                         f"container '{container}'...")
 
-    if convert_string and isinstance(att, np.string_):
+    if convert_string and isinstance(att, str):
         att = att.decode('UTF-8')
 
     return att

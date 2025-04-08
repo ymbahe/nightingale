@@ -23,6 +23,7 @@ class SnapshotParticles(ParticlesBase):
         self.snapshot = snapshot
         self.par = snapshot.par
         self.subhaloes = snapshot.subhaloes
+        self.sim = snapshot.sim
         self.snapshot.particles = self
         self.n_parts = None
 
@@ -40,7 +41,8 @@ class SnapshotParticles(ParticlesBase):
         pos_name = par['Input']['Names']['ParticleCoordinates']
         vel_name = par['Input']['Names']['ParticleVelocities']
         energy_name = par['Input']['Names']['ParticleInternalEnergies']
-
+        fof_name = par['Input']['Names']['ParticleFOFIndex']
+        
         # Load "raw" snapshot information
 
         ids = np.zeros(0, dtype=np.uint64)
@@ -143,6 +145,7 @@ class SnapshotParticles(ParticlesBase):
 
         # Second part: get membership info...
         self.subhalo_indices = self.subhaloes.build_particle_memberships(self)
+
         
     def ids_to_indices(self, ids):
         """Find the internal indices corresponding to input IDs."""
@@ -209,7 +212,9 @@ class SnapshotParticles(ParticlesBase):
         particles in subhaloes, so we just delegate to an appropriate function.
         """
         if self.par['Input']['LoadFullFOF']:
-            self.initialize_memberships_from_fof()
+            print("WARNING!!! NOT DOING WHAT IT SHOULD BE!!!")
+            self.initialize_memberships_from_subhaloes()
+            #self.initialize_memberships_from_fof()   TEMPORARY
         else:
             self.initialize_memberships_from_subhaloes()
 
@@ -343,7 +348,11 @@ class SnapshotParticles(ParticlesBase):
         self.velocities = self.velocities[source_indices, :]
         self.internal_energies = self.internal_energies[source_indices]
         self.subhalo_indices = self.subhalo_indices[source_indices]
+        self.origins = self.origins[source_indices]
+        if hasattr(self, 'fof'):
+            self.fof = self.fof[source_indices]
 
+            
         # Re-calculate number of particles by type
         self.n_pt = np.bincount(self.ptypes, minlength=6)
         n_part_now = np.sum(self.n_pt)
@@ -352,7 +361,7 @@ class SnapshotParticles(ParticlesBase):
         for pt in range(6):
             print(f"   PartType {pt}: {n_pt_before[pt]} --> {self.n_pt[pt]}")
 
-    def calculate_radii(centres):
+    def calculate_radii(self, centres):
         """Calculate the radii of all particles from the halo centres."""
 
         if np.max(self.subhalo_indices) >= len(centres):
@@ -360,15 +369,19 @@ class SnapshotParticles(ParticlesBase):
             set_trace()
 
         centres_by_part = centres[self.subhalo_indices, :]
-        self.radii = np.linalg.norm(self.coordinates - centres_by_part)
-        tools.periodic_wrapping(self.radii, boxsize=self.par['Sim']['Boxsize'])    
+        self.radii = np.linalg.norm(self.coordinates - centres_by_part, axis=1)
+        tools.periodic_wrapping(self.radii, boxsize=self.sim.boxsize)
 
-    def rearrange_for_output():
+    def rearrange_for_output(self):
         """Rearrange the particles by subhalo and radius."""
 
         # Make sure we don't have any unbound particles
         if np.min(self.subhalo_indices) < 0:
             print("Why are there unbound particles??")
+            set_trace()
+
+        if len(self.radii) != len(self.subhalo_indices):
+            print("Why on EARTH are the lengths different?????")
             set_trace()
         sorter = np.lexsort((self.radii, self.subhalo_indices))
         self.update_particle_fields(sorter)

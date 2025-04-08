@@ -3,6 +3,11 @@
 import h5py as h5
 import numpy as np
 from pdb import set_trace
+import iocomments
+import os
+import tools
+import hdf5
+import ctypes as c
 
 def form_nightingale_property_file(par, isnap):
     """Form the property file name for a given snapshot."""
@@ -73,18 +78,22 @@ class Output:
         self.par = par['Output']
         self.verbose = par['Verbose']
         self.snapshot = snapshot
-        self.simulation = snapshot.sim
+        self.sim = snapshot.sim
         self.input_sub = subhaloes
         self.particles = particles
         self.n_input_subhaloes = subhaloes.n_input_subhaloes
 
         # Work out where to eventually write the output
-        self.file = self.construct_output_files()
+        self.construct_output_files()
 
         # Work out which input subhaloes are "detected" (=in output)
         ind_found, mass_found = self.find_detected_subhaloes()
         self.n_output_subhaloes = len(ind_found)
-
+        self.n_output_fof = np.count_nonzero(
+            self.snapshot.subhaloes.centrals[ind_found] == ind_found)
+        print(f"There are {self.n_output_subhaloes} subhaloes and "
+              f"{self.n_output_fof} FOF groups (including fake ones).")
+        
         # Set up the internal arrays that will hold the output
         self.initialise_output_fields()
 
@@ -106,23 +115,52 @@ class Output:
         n_found = len(ind_found)
         print(f"Out of {self.n_input_subhaloes}, {n_found} are in the output.")
 
-        return ind_found, subhalo_masses[ind_found], subhalo_nparts[ind_found]
+        return ind_found, subhalo_masses[ind_found]
 
     def initialise_output_fields(self):
         """Initialise the output data structures."""
         n_sub = self.n_output_subhaloes
-        n_fof = self.n_output_fof
+        #n_fof = self.n_output_fof
 
-        self.subhaloes = {}
+        self.subhaloes = {
+            'CentresOfPotential': None,
+            'ParticleOffsets': np.zeros(n_sub + 1, dtype=int),
+            'ParticleNumbers': np.zeros(n_sub, dtype=np.int32),
+            'ParticleNumbersByType': np.zeros((n_sub, 6), dtype=np.int32),
+            
+
+
+        lenType_p = self.subhaloes['ParticleNumbersByType'].ctypes.data_as(c.c_void_p)
+        offType_p = self.subhaloes['ParticleOffsetsByType'].ctypes.data_as(c.c_void_p)
+        offTypeAp_p = self.subhaloes['ParticleOffsetsByAperture'].ctypes.data_as(c.c_void_p)
+        massTypeAp_p = self.subhaloes['MassesByType'].ctypes.data_as(c.c_void_p)
+        vmax_p = self.subhaloes['MaximumCircularVelocities'].ctypes.data_as(c.c_void_p)
+        rvmax_p = self.subhaloes['RadiiOfVMax'].ctypes.data_as(c.c_void_p)
+        mtot_p = self.subhaloes['TotalMasses'].ctypes.data_as(c.c_void_p)
+        comPos_p = self.subhaloes['CentresOfMass'].ctypes.data_as(c.c_void_p)
+        zmfVel_p = self.subhaloes['MassAveragedVelocities'].ctypes.data_as(c.c_void_p)
+        rMax_p = self.subhaloes['MaximumRadii'].ctypes.data_as(c.c_void_p)
+        rMaxType_p = self.subhaloes['MaximumRadiiByType'].ctypes.data_as(c.c_void_p)
+        comPosType_p = self.subhaloes['CentresOfMassByType'].ctypes.data_as(c.c_void_p)
+        zmfVelType_p = self.subhaloes['MassAveragedVelocitiesByType'].ctypes.data_as(c.c_void_p)
+        velDisp_p = self.subhaloes['VelocityDispersions'].ctypes.data_as(c.c_void_p)
+        angMom_p = self.subhaloes['AngularMomenta'].ctypes.data_as(c.c_void_p)
+        axes_p = self.subhaloes['PrincipalAxes'].ctypes.data_as(c.c_void_p)
+        axRat_p = self.subhaloes['PrincipalAxisRatios'].ctypes.data_as(c.c_void_p)
+        kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
+        smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
+
+
+        }
         self.fof = {}
 
         self.comments = {
-            'FOF': io_comments.fof_comments,
-            'Subhaloes': io_comments.subhalo_comments,
-            'IDs': io_comments.ids_comments
+            'FOF': iocomments.fof_comments,
+            'Subhaloes': iocomments.subhalo_comments,
+            'IDs': iocomments.ids_comments
         }
 
-    def assign_subhalo_ids(input_indices, masses):
+    def assign_subhalo_ids(self, input_indices, masses):
         """Establish the output order of subhaloes.
         
         All galaxies to be included in the output are sorted, first by
@@ -154,15 +192,16 @@ class Output:
         if len(sorter) != self.n_output_subhaloes:
             print(f"Inconsistent array lengths!")
             set_trace()
-
+        input_from_output = input_indices[sorter]
+            
         # Invert the translation list to get output-from-input
-        inv_sorter = np.zeros(self.n_input_subhaloes, dtype=int) - 1
-        inv_sorter[sorter] = np.arange(self.n_output_subhaloes)
+        output_from_input = np.zeros(self.n_input_subhaloes, dtype=int) - 1
+        output_from_input[input_from_output] = np.arange(len(input_indices))
 
         # Store the results
-        self.output_shi_from_input_shi = inv_sorter
+        self.output_shi_from_input_shi = output_from_input
 
-        self.subhaloes['InputHaloIDs'] = sorter
+        self.subhaloes['InputHaloIDs'] = input_from_output
         self.subhaloes['FOFIndices'] = fof[sorter]
         self.subhaloes['FOFFlags'] = flag_fof[sorter]
         self.subhaloes['CentralFlags'] = flag_cen[sorter]
@@ -171,7 +210,7 @@ class Output:
         """Compute the particle count and mass of all input subhaloes."""
 
         particles = self.particles
-        n_input_subhaloes = self.input_sub.n_subhaloes
+        n_input_subhaloes = self.input_sub.n_input_subhaloes
 
         # Compute total mass and particle count of each subhalo. We use
         # bincount for this. There should be no particles outside of subhaloes
@@ -182,7 +221,7 @@ class Output:
 
         num_part_by_subhalo = np.bincount(particles.subhalo_indices)
         mass_by_subhalo = np.bincount(
-            particles.subhalo_indices, weights=particles.mass)
+            particles.subhalo_indices, weights=particles.masses)
 
         return num_part_by_subhalo, mass_by_subhalo
 
@@ -193,7 +232,7 @@ class Output:
 
         # Find the final position of each subhalo
         if self.par['COPAtUnbinding']:
-            cop = input_sh.get_cop(shi_in)
+            cop = self.input_sub.get_coordinates(shi_in)
         else:
             cop = self.compute_cop(shi_in)
 
@@ -209,17 +248,18 @@ class Output:
         # Store the result
         self.subhaloes['CentresOfPotential'] = cop
 
-        if par['RecordFinalUnbindingFrame']:
+        if self.par['RecordFinalUnbindingFrame']:
             self.subhaloes['FinalUnbindingCentres'] = (
-                input_sh.get_coordinates(shi_in))
+                self.input_sub.get_coordinates(shi_in))
             self.subhaloes['FinalUnbindingVelocities'] = (
-                input_sh.get_velocities(shi_in))
+                self.input_sub.get_velocities(shi_in))
 
-    def compute_cop(shi):
+    def compute_cop(self, shi):
         """Compute the centre of potential for (input) subhaloes."""
-        pass
+        print(f"At-output COP calculation is not yet implemented!!")
+        set_trace()
 
-    def compute_output_quantities():
+    def compute_output_quantities(self):
         """Compute what we want to know about the subhaloes."""
 
         print("Computing galaxy properties... ", end='', flush=True)
@@ -320,7 +360,7 @@ class Output:
         self.file = self.par['Directory'] + '/' + output_file
         self.id_file = self.par['Directory'] + '/' + id_file
 
-    def write_header(file_name):
+    def write_header(self, file_name):
         """Write the header information to the specified file."""
 
         # Copy all parameters into a separate group in the output file
@@ -328,19 +368,23 @@ class Output:
 
         # Write relevant metadata to 'Header' group
         with h5.File(file_name, 'a') as o:
+            try:
+                hdr = o['Header']
+            except KeyError:
+                o.create_group('Header')
             o['Header'].attrs['Redshift'] = self.snapshot.redshift
             o['Header'].attrs['ExpansionFactor'] = self.snapshot.aexp
             o['Header'].attrs['NumberOfSubhaloes'] = self.n_output_subhaloes
             o['Header'].attrs['NumberOfFOFs'] = self.n_output_fof
 
-    def write_particle_data(file_name):
+    def write_particle_data(self, file_name):
         """Write the desired data for subhalo particles."""
         with h5.File(file_name, 'a') as o:
             o['IDs'] = self.particles.ids
             o['IDs'].attrs['Comment'] = self.comments['IDs']['IDs']
             
 
-    def write_fof_info(file_name):
+    def write_fof_info(self, file_name):
         """Write FOF-level information to the specified file."""
         grp = 'FOF'
         with h5.File(file_name, 'a') as o:
@@ -349,19 +393,20 @@ class Output:
                 o[dname] = self.fof[key]
                 o[dname].attrs['Comment'] = self.comments['FOF'][key]
 
-    def write_cross_indices(file_name):
+    def write_cross_indices(self, file_name):
         """Write cross-indices between output and input catalogues."""
         grp = 'Subhalo'
 
         # Subhalo --> galaxy index
+        set_trace()
         hdf5.write_data(
-            file_name, grp + 'TrackID', self.subhalo['TrackID'],
+            file_name, grp + 'TrackID', self.subhaloes['GalaxyIDs'],
             comment = "Track ID for each subhalo index, from input catalogue."
         )
         
         # Subhalo --> FOF
         hdf5.write_data(
-            file_name, grp + 'FOF', self.subhalo['FOFIndices'],
+            file_name, grp + 'FOF', self.subhaloes['FOFIndices'],
             comment = "Index of the FOF group to which this subhalo "
             "belongs. Note that this may not be a real FOF group, as "
             "specified by FOFFlags."
@@ -369,7 +414,7 @@ class Output:
         
         # Output <--> Input subhalo cross indices
         hdf5.write_data(
-            file_name, grp + 'InputHalo', self.subhalo['InputHaloIDs'], 
+            file_name, grp + 'InputHalo', self.subhaloes['InputHaloIDs'], 
             comment = "Index of the corresponding subhalo in "
             "the input catalogue. If this is < 0, it means "
             "that the subhalo was lost in the input catalogue but recovered "
@@ -385,7 +430,7 @@ class Output:
             "IndexByInputHalo[i]."
         )
 
-    def write_subhalo_particle_links(file_name):
+    def write_subhalo_particle_links(self, file_name):
         """Write the information to retrieve subhalo particles."""
         grp = 'Subhalo'
 
@@ -421,7 +466,7 @@ class Output:
             "[offset_i]:[offset_i+1]."
         )
 
-    def write_subhalo_properties(file_name):
+    def write_subhalo_properties(self, file_name):
         """Write the physical subhalo properties."""
         grp = 'Subhalo'  
 

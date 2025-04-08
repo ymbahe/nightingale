@@ -89,7 +89,9 @@ def main():
         # Find the source particles of the galaxy (separate from
         # initialisation to allow for easier swapping)
         galaxy_particles = galaxy.find_source_particles()
-        
+        if galaxy_particles is None:
+            continue
+
         # Perform gravitational unbinding
         final_subhalo_coords, m_bound = galaxy_particles.unbind()
         subhaloes.register_unbinding_result(ish, final_subhalo_coords, m_bound)
