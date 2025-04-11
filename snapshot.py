@@ -46,8 +46,14 @@ class Snapshot:
         par = self.par
 
         self.snapshot_file = ioi.form_snapshot_file(par, isnap)
-        self.subhalo_file = ioi.form_subhalo_file(par, isnap)
-        self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
+        if self.par['Input']['FromNightingale'] and self.offset < 0:
+            self.subhalo_file = (
+                ion.form_nightingale_property_file(self.par, self.isnap))
+            self.subhalo_particle_file = (
+                ion.form_nightingale_id_file(self.par, self.isnap))
+        else:
+            self.subhalo_file = ioi.form_subhalo_file(par, isnap)
+            self.subhalo_particle_file = ioi.form_subhalo_particle_file(par, isnap)
         #self.subhalo_membership_file = ioi.form_subhalo_membership_file(
         #    par, isnap)
         

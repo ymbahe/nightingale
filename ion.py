@@ -15,7 +15,6 @@ def form_nightingale_property_file(par, isnap):
     catalogue_name = catalogue_name.replace('XXXX', f'{isnap:04d}')
     return par['Output']['Directory'] + catalogue_name
 
-
 def form_nightingale_id_file(par, isnap):
     """Form the subhalo ID file name for a given snapshot."""
     id_name = par['Output']['IDFileName']
@@ -30,8 +29,8 @@ def form_nightingale_waitlist_file(par, isnap):
 
 def load_subhalo_particles_nightingale(property_file, id_file):
     with h5.File(property_file, 'r') as f:
-        offsets = f['Subhalo/Offset'][...]
-        lengths = f['Subhalo/Lengths'][...]
+        offsets = f['Subhalo/ParticleOffsets'][...]
+        lengths = f['Subhalo/NumberOfParticles'][...]
     with h5.File(id_file, 'r') as f:
         ids = f['IDs'][...]
 
@@ -43,10 +42,23 @@ def load_subhalo_particles_nightingale(property_file, id_file):
 
     return ids_all
 
+def load_subhalo_catalogue_nightingale(property_file):
+    names = [
+        ('GalaxyIDs', 'Subhalo/TrackID'),
+    ]
+    data = {}
+    with h5.File(property_file, 'r') as f:
+        for field in names:
+            cat_name = field[1]
+            internal_name = field[0]
+            data[internal_name] = f[cat_name][...]
+
+    return data
+
 def load_waitlist_particles_nightingale(waitlist_file):
     """Load the particle IDs from the waiting list."""
-    with h5.file(waitlist_file, 'r') as f:
-        offsets = f['Offset'][...]
+    with h5.File(waitlist_file, 'r') as f:
+        offsets = f['Offsets'][...]
         ids = f['IDs'][...]
 
     waitlist = []
@@ -124,33 +136,30 @@ class Output:
 
         self.subhaloes = {
             'CentresOfPotential': None,
-            'ParticleOffsets': np.zeros(n_sub + 1, dtype=int),
-            'ParticleNumbers': np.zeros(n_sub, dtype=np.int32),
-            'ParticleNumbersByType': np.zeros((n_sub, 6), dtype=np.int32),
-            
-
-
-        lenType_p = self.subhaloes['ParticleNumbersByType'].ctypes.data_as(c.c_void_p)
-        offType_p = self.subhaloes['ParticleOffsetsByType'].ctypes.data_as(c.c_void_p)
-        offTypeAp_p = self.subhaloes['ParticleOffsetsByAperture'].ctypes.data_as(c.c_void_p)
-        massTypeAp_p = self.subhaloes['MassesByType'].ctypes.data_as(c.c_void_p)
-        vmax_p = self.subhaloes['MaximumCircularVelocities'].ctypes.data_as(c.c_void_p)
-        rvmax_p = self.subhaloes['RadiiOfVMax'].ctypes.data_as(c.c_void_p)
-        mtot_p = self.subhaloes['TotalMasses'].ctypes.data_as(c.c_void_p)
-        comPos_p = self.subhaloes['CentresOfMass'].ctypes.data_as(c.c_void_p)
-        zmfVel_p = self.subhaloes['MassAveragedVelocities'].ctypes.data_as(c.c_void_p)
-        rMax_p = self.subhaloes['MaximumRadii'].ctypes.data_as(c.c_void_p)
-        rMaxType_p = self.subhaloes['MaximumRadiiByType'].ctypes.data_as(c.c_void_p)
-        comPosType_p = self.subhaloes['CentresOfMassByType'].ctypes.data_as(c.c_void_p)
-        zmfVelType_p = self.subhaloes['MassAveragedVelocitiesByType'].ctypes.data_as(c.c_void_p)
-        velDisp_p = self.subhaloes['VelocityDispersions'].ctypes.data_as(c.c_void_p)
-        angMom_p = self.subhaloes['AngularMomenta'].ctypes.data_as(c.c_void_p)
-        axes_p = self.subhaloes['PrincipalAxes'].ctypes.data_as(c.c_void_p)
-        axRat_p = self.subhaloes['PrincipalAxisRatios'].ctypes.data_as(c.c_void_p)
-        kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
-        smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
-
-
+            'ParticleOffsets': np.zeros(n_sub + 1, dtype=np.int64),
+            'NumberOfParticles': np.zeros(n_sub, dtype=np.int32),
+            'NumberOfParticlesByType': np.zeros((n_sub, 6), dtype=np.int32),
+            'ParticleOffsetsByType': np.zeros((n_sub, 7), dtype=np.int64),
+            'ParticleOffsetsByAperture': np.zeros(
+                (n_sub, 6, 5), dtype=np.int64) - 1,
+            'TotalMasses': np.zeros(n_sub, dtype=np.float32),
+            'MassesByType': np.zeros((n_sub, 6, 5), dtype=np.float32),
+            'MaximumCircularVelocities': np.zeros(
+                n_sub, dtype=np.float32) + np.nan,
+            'RadiiOfVMax': np.zeros(
+                n_sub, dtype=np.float32) + np.nan,
+            'CentresOfMass': np.zeros((n_sub, 3), dtype=np.float32) + np.nan,
+            'MassAveragedVelocities': np.zeros((n_sub, 3), dtype=np.float32) + np.nan,
+            'CentresOfMassByType': np.zeros((n_sub, 6, 3), dtype=np.float32) + np.nan,
+            'MassAveragedVelocitiesByType': np.zeros((n_sub, 9, 3), dtype=np.float32) + np.nan,
+            'MaximumRadii': np.zeros(n_sub, dtype=np.float32) + np.nan,
+            'MaximumRadiiByType': np.zeros((n_sub, 6), dtype=np.float32) + np.nan,
+            'VelocityDispersions': np.zeros((n_sub, 6), dtype=np.float32) + np.nan,
+            'AngularMomenta': np.zeros((n_sub, 9, 3), dtype=np.float32) + np.nan,
+            'PrincipalAxes': np.zeros((n_sub, 6, 3, 3), dtype=np.float32) + np.nan,
+            'PrincipalAxisRatios': np.zeros((n_sub, 6, 2), dtype=np.float32) + np.nan,
+            'KappaCo': np.zeros((n_sub, 2), dtype=np.float32) + np.nan,
+            'StellarRadii': np.zeros((n_sub, 2, 3), dtype=np.float32) + np.nan
         }
         self.fof = {}
 
@@ -195,7 +204,7 @@ class Output:
         input_from_output = input_indices[sorter]
             
         # Invert the translation list to get output-from-input
-        output_from_input = np.zeros(self.n_input_subhaloes, dtype=int) - 1
+        output_from_input = np.zeros(self.n_input_subhaloes, dtype=np.int32) - 1
         output_from_input[input_from_output] = np.arange(len(input_indices))
 
         # Store the results
@@ -205,6 +214,8 @@ class Output:
         self.subhaloes['FOFIndices'] = fof[sorter]
         self.subhaloes['FOFFlags'] = flag_fof[sorter]
         self.subhaloes['CentralFlags'] = flag_cen[sorter]
+        self.subhaloes['GalaxyIDs'] = (
+            self.input_sub.galaxy_ids[input_from_output])
 
     def count_particles(self):
         """Compute the particle count and mass of all input subhaloes."""
@@ -273,6 +284,8 @@ class Output:
 
         # Metadata
         c_numPart = c.c_long(particles.n_parts)
+        print(f"particles.n_parts = {particles.n_parts}")
+        print(f"Num in 2053: {np.count_nonzero(particles.subhalo_indices == 2053)}")
         c_numSH = c.c_int(self.n_output_subhaloes)
         c_verbose = c.c_int(self.verbose)
         c_epsilon = c.c_float(self.snapshot.epsilon)
@@ -286,11 +299,13 @@ class Output:
         rad_p = particles.radii.ctypes.data_as(c.c_void_p)
         ids_p = particles.ids.ctypes.data_as(c.c_void_p)
 
+        if np.min(particles.subhalo_indices) < 0: set_trace()
+        
         # Output fields
         cop_p = self.subhaloes['CentresOfPotential'].ctypes.data_as(c.c_void_p)
         off_p = self.subhaloes['ParticleOffsets'].ctypes.data_as(c.c_void_p)
-        len_p = self.subhaloes['ParticleNumbers'].ctypes.data_as(c.c_void_p)
-        lenType_p = self.subhaloes['ParticleNumbersByType'].ctypes.data_as(c.c_void_p)
+        len_p = self.subhaloes['NumberOfParticles'].ctypes.data_as(c.c_void_p)
+        lenType_p = self.subhaloes['NumberOfParticlesByType'].ctypes.data_as(c.c_void_p)
         offType_p = self.subhaloes['ParticleOffsetsByType'].ctypes.data_as(c.c_void_p)
         offTypeAp_p = self.subhaloes['ParticleOffsetsByAperture'].ctypes.data_as(c.c_void_p)
         massTypeAp_p = self.subhaloes['MassesByType'].ctypes.data_as(c.c_void_p)
@@ -354,11 +369,8 @@ class Output:
 
     def construct_output_files(self):
         isnap = self.snapshot.isnap
-        output_file = self.par['OutputFile'].replace('XXX', f'{isnap:04d}')
-        id_file = self.par['OutputFileIDs'].replace('XXX', f'{isnap:04d}')
-
-        self.file = self.par['Directory'] + '/' + output_file
-        self.id_file = self.par['Directory'] + '/' + id_file
+        self.file = self.snapshot.nightingale_property_file
+        self.id_file = self.snapshot.nightingale_id_file
 
     def write_header(self, file_name):
         """Write the header information to the specified file."""
@@ -395,10 +407,9 @@ class Output:
 
     def write_cross_indices(self, file_name):
         """Write cross-indices between output and input catalogues."""
-        grp = 'Subhalo'
+        grp = 'Subhalo/'
 
         # Subhalo --> galaxy index
-        set_trace()
         hdf5.write_data(
             file_name, grp + 'TrackID', self.subhaloes['GalaxyIDs'],
             comment = "Track ID for each subhalo index, from input catalogue."
@@ -432,7 +443,7 @@ class Output:
 
     def write_subhalo_particle_links(self, file_name):
         """Write the information to retrieve subhalo particles."""
-        grp = 'Subhalo'
+        grp = 'Subhalo/'
 
         hdf5.write_data(
             file_name, grp + 'ParticleOffsets',

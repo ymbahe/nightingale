@@ -4,6 +4,7 @@ Started 17 Feb 2025.
 """
 
 import ioi
+import ion
 import tools
 import numpy as np
 from pdb import set_trace
@@ -53,18 +54,30 @@ class SnapshotGalaxies(GalaxyBase):
 
         subhalo_data_names = ioi.subhalo_data_names(self.par,
             with_parents=with_parents, with_descendants=with_descendants)
-        if self.par['InputHaloes']['UseSOAP']:
+        self.subhalo_data_type = None
+        if self.par['Input']['FromNightingale'] and self.kind == 'prior':
+            subhalo_data = ion.load_subhalo_catalogue_nightingale(subhalo_file)
+            self.subhalo_data_type = 'Nightingale'
+        elif self.par['InputHaloes']['UseSOAP']:
             subhalo_data = ioi.load_subhalo_catalogue_soap(
                 subhalo_file, subhalo_data_names)
+            self.subhalo_data_type = 'SOAP'
         else:
             subhalo_data = ioi.load_subhalo_catalogue_hbt(
                 subhalo_file, subhalo_data_names)
+            self.subhalo_data_type = 'HBT'
         for key in subhalo_data:
             setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
             
         # Build a list pointing directly to the (top-level) parent of each
         # subhalo, i.e. its central.
         self.n_input_subhaloes = len(self.galaxy_ids)
+
+        # The rest is only relevant to target snapshots, so exit if this is
+        # a prior...
+        if self.kind == 'prior':
+            return
+
         self.centrals = self.find_top_level_parents()
 
         # Assign a fake 'FOF' index to unhosted subhaloes
@@ -90,9 +103,11 @@ class SnapshotGalaxies(GalaxyBase):
         """
         particle_file = self.snap.subhalo_particle_file
         if self.par['Input']['FromNightingale'] and self.snap.offset < 0:
-            self.particle_ids = ioi.load_subhalo_particles_nightingale(
-                self.nightingale_property_file, self.nightingale_id_file)
-
+            self.particle_ids = ion.load_subhalo_particles_nightingale(
+                self.snap.nightingale_property_file,
+                self.snap.nightingale_id_file
+            )
+            
         else:
             self.particle_ids = ioi.load_subhalo_particles_external(
                 particle_file, self.subhalo_ids_for_base_haloes)
@@ -225,6 +240,8 @@ class SnapshotGalaxies(GalaxyBase):
 
     def find_subhalo_particle_ids(self, ish):
         """Find particle IDs for a specified subhalo."""
+        if ish >= len(self.particle_ids):
+            set_trace()
         return self.particle_ids[ish]
 
     def find_galaxy_waitlist_ids(self, igal):
@@ -241,7 +258,7 @@ class SnapshotGalaxies(GalaxyBase):
 
         # Can't do anything if there are no subhaloes...
         if self.n_input_subhaloes == 0:
-            return np.zeros(0, dtype=int)
+            return np.zeros(0, dtype=np.int32)
         
         # Find maximum depth of subhaloes -- need to iterate that many times
         max_depth = np.max(self.depth)
@@ -249,7 +266,7 @@ class SnapshotGalaxies(GalaxyBase):
         # Initialise 'parent' subhalo list, starting with haloes themselves
         # We will then update them successively until they point to the
         # top-level parents.
-        curr_parent = np.arange(self.n_input_subhaloes, dtype=int)
+        curr_parent = np.arange(self.n_input_subhaloes, dtype=np.int32)
 
         for iit in range(max_depth):
             gal_parent = self.parent_galaxy_ids[curr_parent]
@@ -320,7 +337,7 @@ class SnapshotGalaxies(GalaxyBase):
         """Build an input subhalo membership list for all particles."""
 
         # Set up a subhalo index list, initialised to -1 (not in a subhalo)
-        subhalo_indices = np.zeros(particles.n_parts, dtype=int) - 1
+        subhalo_indices = np.zeros(particles.n_parts, dtype=np.int32) - 1
 
         # Go through each subhalo and mark their particles
         for ish in range(self.n_input_subhaloes):
@@ -339,7 +356,7 @@ class SnapshotGalaxies(GalaxyBase):
 
             # Mark relevant particles as belonging to current subhalo.
             subhalo_indices[curr_inds] = ish
-            
+
         return subhalo_indices
 
 
@@ -370,6 +387,7 @@ class TargetGalaxy(GalaxyBase):
         particles = self.snap.particles
 
         # Find the source indices (lots of internal heavy lifting)
+        print(f"Loading sources... (type={self.subhaloes.subhalo_data_type})")
         source_inds, origins = self.find_source_indices()
 
         if len(source_inds) == 0: return None
@@ -441,7 +459,7 @@ class TargetGalaxy(GalaxyBase):
         
         # Level 0: particles that were in a parent in prior snapshot
         ids_parents = prior_subhaloes.find_parent_particle_ids(self.igal)
-        origins_parents = np.zeros(len(ids_parents), dtype=np.int8)
+        #origins_parents = np.zeros(len(ids_parents), dtype=np.int8)
 
         # Level 1: particles that were in the galaxy itself in prior
         if include_l1:

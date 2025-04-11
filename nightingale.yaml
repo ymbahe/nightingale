@@ -17,7 +17,7 @@ Sim:
   SubhaloFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   SubhaloParticleFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   RedshiftsAreAexp: False
-  Snapshot: 127
+  Snapshot: 126
   Boxsize: 12.5
 
 InputHaloes:
@@ -106,7 +106,7 @@ Input:
     ParticleInternalEnergies: InternalEnergies
     ParticleFOFIndex: FOFGroupIDs
 
-  LoadWaitlist: False
+  LoadWaitlist: True
 
   # Include bondary particles (only useful for testing, not in SF catalogues)
   IncludeBoundary:    False      
@@ -130,7 +130,7 @@ Input:
 
   # Should previous subhaloes be read from Cantor, instead of SF?
   # This is generally recommended, both for speed and accuracy.
-  FromNightingale:     False                      # Default: True
+  FromNightingale:     True                      # Default: True
 
   # Should we keep track of different particle types? This may
   # be automatically overridden depending on output types...
@@ -168,17 +168,13 @@ Lost:
 Output:  
 
   Directory:       '/cosma8/data/dp004/dc-bahe1/'
-  CatalogueName:   'Nightingale_XXXX.hdf5'
-  IDFileName:      'Nightingale_XXXX_IDs.hdf5'
+  CatalogueName:   'Nightingale_L12N94_XXXX.hdf5'
+  IDFileName:      'Nightingale_L12N94_XXXX_IDs.hdf5'
   WaitlistIDFileName: 'Nightingale_XXXX_Waitlist-IDs.hdf5'
   ListCentralsFirst: True
   RecordFinalUnbindingFrame: True
 
   GalQuantObjectFile: '/cosma/home/dp004/dc-bahe1/repos/GALQUANT/galquant.so'
-
-  # File to write output to
-  OutputFile:      'Nightingale_L12N94_XXXX.hdf5'
-  OutputFileIDs:   'Nightingale_IDs_L12N94_XXXX.hdf5'
 
   # Compute and write additional quantities, beyond pure segmentation maps?
   GalaxyProperties:      True               # Default: True

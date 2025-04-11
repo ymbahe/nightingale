@@ -47,7 +47,7 @@ class SnapshotParticles(ParticlesBase):
 
         ids = np.zeros(0, dtype=np.uint64)
         ptypes = np.zeros(0, dtype=np.int8)
-        masses = np.zeros(0)
+        masses = np.zeros(0, dtype=np.float32)
         coordinates = np.zeros((0, 3))
         velocities = np.zeros((0, 3), dtype=np.float32)
         internal_energies = np.zeros(0)
@@ -360,7 +360,8 @@ class SnapshotParticles(ParticlesBase):
         print(f"Updated particle fields ({n_part_before} --> {n_part_now}).")
         for pt in range(6):
             print(f"   PartType {pt}: {n_pt_before[pt]} --> {self.n_pt[pt]}")
-
+        self.n_parts = n_part_now
+            
     def calculate_radii(self, centres):
         """Calculate the radii of all particles from the halo centres."""
 
@@ -369,8 +370,9 @@ class SnapshotParticles(ParticlesBase):
             set_trace()
 
         centres_by_part = centres[self.subhalo_indices, :]
-        self.radii = np.linalg.norm(self.coordinates - centres_by_part, axis=1)
-        tools.periodic_wrapping(self.radii, boxsize=self.sim.boxsize)
+        dpos_by_part = self.coordinates - centres_by_part
+        tools.periodic_wrapping(dpos_by_part, boxsize=self.sim.boxsize)
+        self.radii = np.linalg.norm(dpos_by_part, axis=1).astype(np.float32)
 
     def rearrange_for_output(self):
         """Rearrange the particles by subhalo and radius."""
