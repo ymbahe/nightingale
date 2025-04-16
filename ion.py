@@ -216,6 +216,15 @@ class Output:
         self.subhaloes['CentralFlags'] = flag_cen[sorter]
         self.subhaloes['GalaxyIDs'] = (
             self.input_sub.galaxy_ids[input_from_output])
+        self.subhaloes['Depths'] = self.input_sub.depth[input_from_output]
+
+        out_parents = self.input_sub.parent_list[input_from_output, :]
+        ind_real = np.nonzero(out_parents >= 0)
+        out_parents[ind_real[0], ind_real[1]] = output_from_input[out_parents[ind_real[0], ind_real[1]]]
+        self.subhaloes['Parents'] = out_parents
+        set_trace()
+        print("BBB")
+        
 
     def count_particles(self):
         """Compute the particle count and mass of all input subhaloes."""

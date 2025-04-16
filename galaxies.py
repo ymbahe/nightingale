@@ -73,13 +73,15 @@ class SnapshotGalaxies(GalaxyBase):
         # subhalo, i.e. its central.
         self.n_input_subhaloes = len(self.galaxy_ids)
 
+        # The function below returns the top-level parents, but also stores
+        # all intermediate parents
+        self.centrals = self.find_top_level_parents()
+
         # The rest is only relevant to target snapshots, so exit if this is
         # a prior...
         if self.kind == 'prior':
             return
-
-        self.centrals = self.find_top_level_parents()
-
+        
         # Assign a fake 'FOF' index to unhosted subhaloes
         ind_unhosted = np.nonzero(self.fof < 0)[0]
         print(f"There are {len(ind_unhosted)} unhosted subhaloes!")
@@ -146,28 +148,30 @@ class SnapshotGalaxies(GalaxyBase):
         # Initialize the properties at the level of the galaxy itself.
         ish = self.subhalo_from_galaxy(igal)
         depth = self.depth[ish]
-        ids = np.zeros(0, dtype=np.uint64)
-        curr_gal = igal
-        curr_ish = ish
+        parents = self.parent_list[ish, :] 
+
         if self.verbose:
             print(f"Finding particles in parents of galaxy {igal} [SH {ish}].")
             print(f"Depth = {depth}")
-            
+
+        ids = np.zeros(0, dtype=np.uint64)
+                
         # Loop through its parents (up to level 1 -- excluding central!) and
         # add their particles.
         n_parents = 0
         for ilevel in range(depth-1, 0, -1):
+            curr_ish = parents[ilevel]
+
+            # Sometimes, a parent may not itself be a real galaxy... Skip!
+            if curr_ish < 0:
+                continue
             n_parents += 1
             if self.verbose:
-                print(f"   Level {ilevel}: SH={curr_ish}, GalID={curr_gal}...")
+                print(f"   Level {ilevel}: SH={curr_ish}")
 
-            ids_curr = self.find_galaxy_particle_ids(curr_gal)
+            ids_curr = self.find_subhalo_particle_ids(curr_ish)
             ids = np.concatenate((ids, ids_curr))
             print(f"   ... added {len(ids_curr)} particle IDs.")
-
-            # Now update the galaxy and subhalo to the immediate parent
-            curr_gal = self.parent_galaxy_of_subhalo(curr_ish)
-            curr_ish = self.subhalo_from_galaxy(curr_gal)
 
         if self.verbose:
             print(f"   Found {len(ids)} IDs from {n_parents} parent galaxies.")
@@ -256,18 +260,23 @@ class SnapshotGalaxies(GalaxyBase):
     def find_top_level_parents(self):
         """Find the top-level parent subhalo for all subhaloes."""
 
+        self.parent_list = None
+        
         # Can't do anything if there are no subhaloes...
         if self.n_input_subhaloes == 0:
             return np.zeros(0, dtype=np.int32)
         
         # Find maximum depth of subhaloes -- need to iterate that many times
         max_depth = np.max(self.depth)
-
+        self.parent_list = np.zeros(
+            (self.n_input_subhaloes, max_depth+1), dtype=np.int32) - 1
+        
         # Initialise 'parent' subhalo list, starting with haloes themselves
         # We will then update them successively until they point to the
         # top-level parents.
         curr_parent = np.arange(self.n_input_subhaloes, dtype=np.int32)
-
+        self.parent_list[curr_parent, self.depth] = curr_parent
+        
         for iit in range(max_depth):
             gal_parent = self.parent_galaxy_ids[curr_parent]
             ind_process = np.nonzero(gal_parent >= 0)[0]
@@ -278,7 +287,9 @@ class SnapshotGalaxies(GalaxyBase):
                 break
             curr_parent[ind_process] = (
                 self.subhalo_from_galaxy(gal_parent[ind_process]))
-
+            self.parent_list[ind_process, self.depth[ind_process]-iit-1] = (
+                curr_parent[ind_process])
+            
         # Verify that all 'parents' are now centrals
         n_sat = np.count_nonzero(self.parent_galaxy_ids[curr_parent] != -1)
         if n_sat > 0:
