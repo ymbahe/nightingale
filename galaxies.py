@@ -71,8 +71,6 @@ class SnapshotGalaxies(GalaxyBase):
         for key in subhalo_data:
             setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
 
-        set_trace()
-            
         # Build a list pointing directly to the (top-level) parent of each
         # subhalo, i.e. its central.
         self.n_input_subhaloes = len(self.galaxy_ids)
