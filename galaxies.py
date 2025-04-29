@@ -499,6 +499,7 @@ class TargetGalaxy(GalaxyBase):
         self.origins = origins
 
         #if np.count_nonzero(origins == 5) > 0.8 * len(origins):
+        """
         if self.ish == 1565:
             with h5.File('HaloTest_1565.hdf5', 'w') as o:
                 o['Masses'] = source_m
@@ -507,6 +508,7 @@ class TargetGalaxy(GalaxyBase):
                 o['Energies'] = source.u
                 o['Origins'] = source.origins
                 o['FOF'] = particles.fof[source_inds]
+        """
 
         # It would be a lovely idea to return the result
         return source
