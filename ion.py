@@ -166,7 +166,8 @@ class Output:
             'PrincipalAxes': np.zeros((n_sub, 6, 3, 3), dtype=np.float32) + np.nan,
             'PrincipalAxisRatios': np.zeros((n_sub, 6, 2), dtype=np.float32) + np.nan,
             'KappaCo': np.zeros((n_sub, 2), dtype=np.float32) + np.nan,
-            'StellarRadii': np.zeros((n_sub, 2, 3), dtype=np.float32) + np.nan
+            'StellarRadii': np.zeros((n_sub, 2, 3), dtype=np.float32) + np.nan,
+            'TotalHalfMassRadii': np.zeros(n_sub, dtype=np.float32) + np.nan
         }
         self.fof = {}
 
@@ -342,9 +343,10 @@ class Output:
         axRat_p = self.subhaloes['PrincipalAxisRatios'].ctypes.data_as(c.c_void_p)
         kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
         smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
+        rhalf_p = self.subhaloes['TotalHalfMassRadii'].ctypes.data_as(c.c_void_p)
         
-        nargs = 33
-        myargv = c.c_void_p * 33
+        nargs = 34
+        myargv = c.c_void_p * 34
         argv = myargv(c.addressof(c_numPart), 
                       c.addressof(c_numSH),
                       mass_p, pos_p, vel_p, type_p, shi_p, rad_p, ids_p,
@@ -353,7 +355,7 @@ class Output:
                       massTypeAp_p, vmax_p, rvmax_p, mtot_p, 
                       comPos_p, zmfVel_p, rMax_p, rMaxType_p, 
                       comPosType_p, zmfVelType_p, velDisp_p, 
-                      angMom_p, axes_p, axRat_p, kappaCo_p, smr_p,
+                      angMom_p, axes_p, axRat_p, kappaCo_p, smr_p, rhalf_p,
                       c.addressof(c_verbose), c.addressof(c_epsilon))
 
         lib = c.cdll.LoadLibrary(ObjectFile)
