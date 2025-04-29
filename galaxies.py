@@ -530,11 +530,11 @@ class TargetGalaxy(GalaxyBase):
 
         # Hardcode selection for now
         include_l1 = True
-        include_l2 = True
-        include_l3 = True
-        include_l4 = True
-        include_l5 = True
-        include_l6 = True
+        include_l2 = False
+        include_l3 = False
+        include_l4 = False
+        include_l5 = False
+        include_l6 = False
         
         origins = np.zeros(0, dtype=int)
         ids = np.zeros(0, dtype=np.uint64)
