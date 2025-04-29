@@ -540,7 +540,7 @@ class TargetGalaxy(GalaxyBase):
         ids = np.zeros(0, dtype=np.uint64)
         
         # Level 0: particles that were in a parent in prior snapshot
-        ids_parents = prior_subhaloes.find_parent_particle_ids(self.igal)
+        #ids_parents = prior_subhaloes.find_parent_particle_ids(self.igal)
         #origins_parents = np.zeros(len(ids_parents), dtype=np.int8)
 
         # Level 1: particles that were in the galaxy itself in prior
@@ -620,8 +620,8 @@ class TargetGalaxy(GalaxyBase):
         # Check which IDs are class 0. We *do not* set them to zero, but
         # to minus their original value, so that we can still set passive
         # particles to massless later.
-        ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
-        origins[ind_0] = -origins[ind_0]
+        #ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
+        #origins[ind_0] = -origins[ind_0]
 
         return inds, origins
 
