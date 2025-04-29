@@ -10,7 +10,7 @@ import numpy as np
 from pdb import set_trace
 from particles import GalaxyParticles
 import h5py as h5
-from scipy.spatial import cKDTree
+#from scipy.spatial import cKDTree
 
 class GalaxyBase:
 
@@ -777,7 +777,7 @@ class TargetGalaxy(GalaxyBase):
         origins[ind_0] = -origins[ind_0]
         """
 
-        return inds, origins
+        return inds[:10], origins[:10]
 
 
     def unicate_ids(self, ids_full, origins_full):      # Class: Galaxy
