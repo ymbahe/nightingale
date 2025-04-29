@@ -42,14 +42,27 @@ def load_subhalo_particles_nightingale(property_file, id_file):
 
     return ids_all
 
-def load_subhalo_catalogue_nightingale(property_file, with_descendants=False):
+def load_subhalo_catalogue_nightingale(
+        par, property_file, with_descendants=False):
     names = [
         ('GalaxyIDs', 'Subhalo/TrackID'),
         ('InputHaloIndices', 'Subhalo/InputHalo'),
         ('Depth', 'Subhalo/Depths'),
         ('ParentList', 'Subhalo/Parents'),
+        ('Coordinates', 'Subhalo/CentresOfPotential'),
     ]
 
+    if par['Sources']['Neighbours']:
+        if par['Sources']['RadiusTypeFree'] == 'HalfMass':
+            names.append(('FreeRadii', 'Subhalo/TotalHalfMassRadii'))
+        elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
+            names.append(('FreeRadii', 'Subhalo/MaximumRadii'))
+
+        if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
+            names.append(('SubRadii', 'Subhalo/TotalHalfMassRadii'))
+        elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':
+            names.append(('SubRadii', 'Subhalo/MaximumRadii'))
+    
     if with_descendants:
         names.append(('DescendantGalaxyIDs', 'Subhalo/DescendantTrackIDs'))
 
@@ -166,7 +179,8 @@ class Output:
             'PrincipalAxes': np.zeros((n_sub, 6, 3, 3), dtype=np.float32) + np.nan,
             'PrincipalAxisRatios': np.zeros((n_sub, 6, 2), dtype=np.float32) + np.nan,
             'KappaCo': np.zeros((n_sub, 2), dtype=np.float32) + np.nan,
-            'StellarRadii': np.zeros((n_sub, 2, 3), dtype=np.float32) + np.nan
+            'StellarRadii': np.zeros((n_sub, 2, 3), dtype=np.float32) + np.nan,
+            'TotalHalfMassRadii': np.zeros(n_sub, dtype=np.float32) + np.nan,
         }
         self.fof = {}
 
@@ -342,9 +356,10 @@ class Output:
         axRat_p = self.subhaloes['PrincipalAxisRatios'].ctypes.data_as(c.c_void_p)
         kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
         smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
-        
-        nargs = 33
-        myargv = c.c_void_p * 33
+        rhalf_p = self.subhaloes['TotalHalfMassRadii'].ctypes.data_as(c.c_void_p)
+        """
+        nargs = 34
+        myargv = c.c_void_p * 34
         argv = myargv(c.addressof(c_numPart), 
                       c.addressof(c_numSH),
                       mass_p, pos_p, vel_p, type_p, shi_p, rad_p, ids_p,
@@ -353,11 +368,12 @@ class Output:
                       massTypeAp_p, vmax_p, rvmax_p, mtot_p, 
                       comPos_p, zmfVel_p, rMax_p, rMaxType_p, 
                       comPosType_p, zmfVelType_p, velDisp_p, 
-                      angMom_p, axes_p, axRat_p, kappaCo_p, smr_p,
+                      angMom_p, axes_p, axRat_p, kappaCo_p, smr_p, rhalf_p,
                       c.addressof(c_verbose), c.addressof(c_epsilon))
 
         lib = c.cdll.LoadLibrary(ObjectFile)
         succ = lib.galquant(nargs, argv)
+        """
 
     def write(self):
         """Write the output to disk."""
@@ -523,9 +539,72 @@ class Output:
 
     def write_subhalo_properties(self, file_name):
         """Write the physical subhalo properties."""
-        grp = 'Subhalo'  
-
-
+        grp = 'Subhalo/'
+        hdf5.write_data(
+            file_name, grp + 'StellarRadii',
+            self.subhaloes['StellarRadii'],
+            comment="Radii containing {20, 50, 80} per cent "
+            "(3rd index) of the stellar mass within {30 pkpc, infty} "
+            "(2nd index) from the subhalo centre (units: pMpc). "
+            "The radii are interpolated between that of the outermost "
+            "particle enclosing less than the target mass and the one "
+            "immediately beyond it. If there is only one "
+            "star particle, the result is taken "
+            "as half its radius."
+        )
+        hdf5.write_data(
+            file_name, grp + 'TotalHalfMassRadii',
+            self.subhaloes['TotalHalfMassRadii'],
+            comment="Radii containing 50 per cent of the total mass of the "
+            "subhalo (units: cMpc)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'MaximumRadii',
+            self.subhaloes['MaximumRadii'],
+            comment = "Distance of furthest particle from subhalo "
+            "centre of potential (units: cMpc)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'MaximumRadiiByType',
+            self.subhaloes['MaximumRadiiByType'],
+            comment = "Distance of furthest particle of "
+            "a given type from subhalo centre of potential "
+            "(units: cMpc)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'TotalMasses',
+            self.subhaloes['TotalMasses'],
+            comment = "Total mass of each subhalo (units: 10^10 M_Sun)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'MassesByType',
+            self.subhaloes['MassesByType'][:, :, 4],
+            comment = "Mass per particle type of each subhalo "
+            "(units: 10^10 M_Sun)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'CentresOfPotential',
+            self.subhaloes['CentresOfPotential'],
+            comment = "Coordinates of particle with the lowest "
+            "gravitational potential (units: cMpc). For "
+            "galaxies that were not unbound directly "
+            "(i.e. centrals, if their unbinding was disabled), "
+            "the value is taken from the input catalogue."
+        )
+        hdf5.write_data(
+            file_name, grp + 'CentresOfMass',
+            self.subhaloes['CentresOfMass'],
+            comment = "Coordinates of subhalo centre of mass (units: cMpc)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'MassAveragedVelocities',
+            self.subhaloes['MassAveragedVelocities'],
+            comment = "Velocity of the subhalo's zero-momentum "
+            "frame (i.e. mass-weighted velocity of all its "
+            "particles). Units: km/s."
+        )
+        
+        
 def initialize_hdf5_file(file_name):
     if os.path.isfile(file_name):
         os.rename(file_name, file_name + '.bak')

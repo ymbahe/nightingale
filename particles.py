@@ -244,7 +244,7 @@ class SnapshotParticles(ParticlesBase):
         self.subhalo_indices = cen_gal_fof
         self.subhalo_indices[ind_gal_nofof] = cen_gal_nofof
 
-    def get_ids_in_sphere(self, cen, r, cen_sh):
+    def get_ids_in_sphere(self, cen, r, cen_sh, return_ptypes=False):
         """Find the particle IDs within a sphere."""
         if not hasattr(self, 'tree'):
             boxsize = self.snapshot.sim.boxsize
@@ -253,9 +253,14 @@ class SnapshotParticles(ParticlesBase):
         ind_ngbs = self.tree.query_ball_point(cen, r)
         ind_ngbs = np.array(ind_ngbs)
 
+        # Restrict selection to particles within the same top-level halo
         ngb_cens = self.subhaloes.centrals[self.subhalo_indices[ind_ngbs]]
         subind = np.nonzero(ngb_cens == cen_sh)[0]
-        return self.ids[ind_ngbs[subind]]
+
+        if return_ptypes:
+            return self.ids[ind_ngbs[subind]], self.ptypes[ind_ngbs[subind]]
+        else:
+            return self.ids[ind_ngbs[subind]]
 
     def update_membership(self, galaxy_particles, galaxy):
         """Incorporate unbinding result into the particle catalogue."""
@@ -304,7 +309,7 @@ class SnapshotParticles(ParticlesBase):
         
     def filter_out_waitlist(self):
         """Filter out and reset particles that are on the wait list."""
-        ind_waitlist = np.nonzero(self.origins == 6)[0]
+        ind_waitlist = np.nonzero(np.abs(self.origins) == 10)[0]
 
         if self.par['Input']['WriteWaitlist']:
             waitlist_split = tools.SplitList(

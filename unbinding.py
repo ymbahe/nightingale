@@ -143,6 +143,7 @@ def unbind_source(
         ind_bound = np.arange(n_part, dtype=int)
         return ind_bound
 
+
     # Call MONK to find bound particles:
     # (Disable maxGap as removed from code)
     ind_bound = monk.monk(
@@ -166,6 +167,9 @@ def unbind_source(
         params['ReturnBE']      # Return (Binding) Energy
     )
 
+    #ind_bound = np.zeros(0, dtype=int)
+    ind_bound = np.arange(len(m))
+    
     if params['ReturnBE']:
         return ind_bound, u
     else:

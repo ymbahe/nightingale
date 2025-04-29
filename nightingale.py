@@ -13,7 +13,11 @@ from galaxies import SnapshotGalaxies, TargetGalaxy
 from particles import SnapshotParticles
 from ion import Output
 
+import gc
+
 from pdb import set_trace
+
+#gc.disable()
 
 def main():
     """Main function of Nightingale, processes one snapshot.
@@ -75,12 +79,23 @@ def main():
     # Main loop over galaxies to assemble, unbind, and assign particles.
     # We process subhaloes in inverse order of depth.
     for idepth in range(np.max(subhaloes.depth), 0, -1):
-        for ish in range(subhaloes.n_input_subhaloes):
 
+        if idepth != 1: continue
+
+        for ish in range(subhaloes.n_input_subhaloes):
+            
             # Only process the subhalo in this turn if its depth is the one
             # that is currently being analysed
             if subhaloes.depth[ish] != idepth:
                 continue
+
+            if ish % 1000 == 0:
+                print(f"ISH={ish}...")
+                gc.collect()
+            #if idepth == 1 and ish == 4000: set_trace()
+            if idepth == 1 and ish >= 5000: break
+            if ish < 4000: continue
+            #if idepth == 1 and ish >= 10000: gc.collect()
             
             # Don't bother with 'fake' subhaloes
             if subhaloes.number_of_bound_particles[ish] <= 0:
