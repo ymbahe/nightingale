@@ -475,12 +475,23 @@ class GalaxyParticles(ParticlesBase):
         print(
             f"Now unbinding subhalo {self.galaxy.ish}.\n"
             f"There are {n_passive} passive particles out of {n_tot}...")
+
+        self.r_copy = np.array(self.r, copy=True)
+        self.m_copy = np.array(self.m, copy=True)
+        
         ind_bound = unbinding.unbind_source(
             self.r, self.v, self.m, self.u,
             self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
             self.sim.boxsize, self.snap.aexp, status=self.initial_status,
             params=monk_params
         )
+
+        del self.r
+        del self.v
+        del self.m
+        del self.u
+        del self.galaxy.r_init
+        del self.galaxy.v_init
         
         # Also need to record unbinding result...
         self.ind_bound = ind_bound
@@ -493,7 +504,7 @@ class GalaxyParticles(ParticlesBase):
                 print(f"Origin {iorigin}: {n_source} --> {n_final}")
         
             # Check how many passive particles ended up becoming bound
-            n_passive_bound = np.count_nonzero(self.m[ind_bound] == 0)
+            n_passive_bound = np.count_nonzero(self.m_copy[ind_bound] == 0)
             if n_passive_bound > 0.05 * len(ind_bound):
                 print(f"WARNIING: {n_passive_bound} / {len(ind_bound)} bound "
                       f"particles are passive!")
@@ -507,9 +518,9 @@ class GalaxyParticles(ParticlesBase):
             halo_centre_of_potential = [-1000, -1000, -1000]
         else:
             ind_mostbound = ind_bound[0]
-            halo_centre_of_potential = self.r[ind_mostbound, :]
+            halo_centre_of_potential = self.r_copy[ind_mostbound, :]
 
         # Compute the total bound mass after the end of MONK
-        m_bound_after_monk = np.sum(self.m[ind_bound])
+        m_bound_after_monk = np.sum(self.m_copy[ind_bound])
         
         return halo_centre_of_potential, m_bound_after_monk

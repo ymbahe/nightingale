@@ -7,7 +7,7 @@ import iocomments
 import os
 import tools
 import hdf5
-import ctypes as c
+#import ctypes as c
 
 def form_nightingale_property_file(par, isnap):
     """Form the property file name for a given snapshot."""
@@ -304,7 +304,9 @@ class Output:
 
     def compute_output_quantities(self):
         """Compute what we want to know about the subhaloes."""
-
+        pass
+        
+        """
         print("Computing galaxy properties... ", end='', flush=True)
 
         particles = self.particles
@@ -357,7 +359,7 @@ class Output:
         kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
         smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
         rhalf_p = self.subhaloes['TotalHalfMassRadii'].ctypes.data_as(c.c_void_p)
-        """
+
         nargs = 34
         myargv = c.c_void_p * 34
         argv = myargv(c.addressof(c_numPart), 
@@ -539,6 +541,9 @@ class Output:
 
     def write_subhalo_properties(self, file_name):
         """Write the physical subhalo properties."""
+        pass
+        
+        """
         grp = 'Subhalo/'
         hdf5.write_data(
             file_name, grp + 'StellarRadii',
@@ -603,7 +608,7 @@ class Output:
             "frame (i.e. mass-weighted velocity of all its "
             "particles). Units: km/s."
         )
-        
+        """
         
 def initialize_hdf5_file(file_name):
     if os.path.isfile(file_name):

@@ -89,12 +89,10 @@ def main():
             if subhaloes.depth[ish] != idepth:
                 continue
 
-            if ish % 1000 == 0:
-                print(f"ISH={ish}...")
-                gc.collect()
+            gc.collect()
             #if idepth == 1 and ish == 4000: set_trace()
             if idepth == 1 and ish >= 5000: break
-            if ish < 4000: continue
+            #if ish < 4000: continue
             #if idepth == 1 and ish >= 10000: gc.collect()
             
             # Don't bother with 'fake' subhaloes
@@ -116,39 +114,39 @@ def main():
 
             # Perform gravitational unbinding
             final_subhalo_coords, m_bound = galaxy_particles.unbind()
-            subhaloes.register_unbinding_result(
-                ish, final_subhalo_coords, m_bound)
+            #subhaloes.register_unbinding_result(
+            #    ish, final_subhalo_coords, m_bound)
             
             # Update full particle membership
-            particles.update_membership(galaxy_particles, galaxy)
+            #particles.update_membership(galaxy_particles, galaxy)
 
     # Filter out 'waitlist' particles
-    particles.filter_out_waitlist()
+    #particles.filter_out_waitlist()
 
     # All subhaloes are processed now, and `particles` contains their final
     # membership information. Update subhalo coordinates in the catalogue.
-    subhaloes.update_coordinates()
+    #subhaloes.update_coordinates()
 
     # Get rid of any particles that are not bound
-    particles.reject_unbound()
+    #particles.reject_unbound()
 
 
     # ----------------------------------------------------------------------
 
     # Almost done -- hand over to output handling...
-    output = Output(par, targetSnap, subhaloes, particles)
+    #output = Output(par, targetSnap, subhaloes, particles)
 
     # Trim the particle list to only include those in identified subhaloes
-    particles.switch_memberships_to_output(output.output_shi_from_input_shi)
+    #particles.switch_memberships_to_output(output.output_shi_from_input_shi)
 
     # Compute the core subhalo properties: particle membership and position
-    output.prepare()
+    #output.prepare()
 
     # Compute what we want to know
-    output.compute_output_quantities()
+    #output.compute_output_quantities()
 
     # Write output
-    output.write()
+    #output.write()
 
 
 

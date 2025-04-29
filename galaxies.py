@@ -58,7 +58,7 @@ class SnapshotGalaxies(GalaxyBase):
         self.subhalo_data_type = None
         if self.par['Input']['FromNightingale'] and self.kind == 'prior':
             subhalo_data = ion.load_subhalo_catalogue_nightingale(
-                subhalo_file, with_descendants=with_descendants)
+                self.par, subhalo_file, with_descendants=with_descendants)
             self.subhalo_data_type = 'Nightingale'
         elif self.par['InputHaloes']['UseSOAP']:
             subhalo_data = ioi.load_subhalo_catalogue_soap(
@@ -70,6 +70,8 @@ class SnapshotGalaxies(GalaxyBase):
             self.subhalo_data_type = 'HBT'
         for key in subhalo_data:
             setattr(self, tools.key_to_attribute_name(key), subhalo_data[key])
+
+        set_trace()
             
         # Build a list pointing directly to the (top-level) parent of each
         # subhalo, i.e. its central.
@@ -291,6 +293,8 @@ class SnapshotGalaxies(GalaxyBase):
 
     def find_subhalo_particle_ids(self, ish):
         """Find particle IDs for one or more specified subhalo(es)."""
+
+        """
         if np.isscalar(ish):
             if ish >= len(self.particle_ids):
                 set_trace()
@@ -302,6 +306,8 @@ class SnapshotGalaxies(GalaxyBase):
             for iish in ish:
                 ids = np.concatenate((ids, self.particle_ids[iish]))
             return ids
+        """
+        return self.particle_ids[ish]
         
     def find_galaxy_waitlist_ids(self, igal):
         """Find particle IDs that are on the waitlist for a given galaxy."""
@@ -570,7 +576,7 @@ class TargetGalaxy(GalaxyBase):
         include_l7 = False
         include_l8 = False
 
-        origins = np.zeros(0, dtype=np.int8)
+        origins = np.zeros(0, dtype=np.int64)
         ids = np.zeros(0, dtype=np.uint64)
         
         # Level 1: particles that were in the galaxy itself in prior
@@ -579,7 +585,8 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l1_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l1_ids), dtype=np.int8) + 1))
-        
+
+        """
         # Level 2: particles that were in a galaxy (in the prior snapshot)
         # that merged with this galaxy by the target snapshot
         if include_l2:
@@ -587,6 +594,7 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l2_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l2_ids), dtype=np.int8) + 2))
+
 
         # Level 3/6: particles that were in another subhalo in the prior
         # snapshot. Particles that were in a subhalo that is a child of the
@@ -680,9 +688,9 @@ class TargetGalaxy(GalaxyBase):
 
         # Level 6 is already dealt with above -- unrelated subhaloes. Just
         # need to include the IDs here, so that they are in the right place
-        ids = np.concatenate((ids, l6_ids))
-        origins = np.concatenate(
-            (origins, np.zeros(len(l6_ids), dtype=np.int8) + 6))
+        #ids = np.concatenate((ids, l6_ids))
+        #origins = np.concatenate(
+        #    (origins, np.zeros(len(l6_ids), dtype=np.int8) + 6))
         
         # Level 7/10: any particles that are within a certain distance from the
         # (input) subhalo centre. Gas particles are assigned origin code 7
@@ -719,6 +727,7 @@ class TargetGalaxy(GalaxyBase):
         ids = np.concatenate((ids, l10_ids))
         origins = np.concatenate(
             (origins, np.zeros(len(l10_ids), dtype=np.int8) + 10))
+        """
 
         # We now have the full list, including duplications. For bookkeeping,
         # let's record how long that list is
@@ -730,6 +739,7 @@ class TargetGalaxy(GalaxyBase):
 
         # Too many passive particles, and especially unrelated/free ones,
         # may spell trouble. Warn explicitly if that happens...
+        """
         n_passive = np.count_nonzero(origins > 4)
         n_l6 = np.count_nonzero(origins == 6)
         n_l7 = np.count_nonzero(origins == 7)
@@ -742,6 +752,7 @@ class TargetGalaxy(GalaxyBase):
             print(f"WARNING: {n_l7}/{len(ids)} unbound particles [L7]!")
         if n_l8 > 0.5 * len(ids):
             print(f"WARNING: {n_l8}/{len(ids)} waitlist particles [L8]!")
+        """
                                 
         # What we really want is the indices into the particle list
         inds = self.subhaloes.snap.particles.ids_to_indices(ids)
@@ -759,9 +770,12 @@ class TargetGalaxy(GalaxyBase):
         # To allow that without interfering with the ability to set passive
         # particles to massless later, we set their origin to minus their
         # original value.
+
+        """
         ids_parents = prior_subhaloes.find_parent_particle_ids(self.igal)
         ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
         origins[ind_0] = -origins[ind_0]
+        """
 
         return inds, origins
 

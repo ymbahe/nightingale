@@ -128,7 +128,7 @@ def unbind_source(
     defaults = [
         ('FixCentre', 0), ('CentreMode', 0), ('CentreFrac', 0.1),
         ('Monotonic', 1), ('ResLimit', 7e-4), ('PotErrTol', 1.0),
-        ('UseTree', 1), ('ReturnBE', 1), ('Tolerance', 0.005),
+        ('UseTree', 1), ('ReturnBE', 0), ('Tolerance', 0.005),
         ('Verbose', 0), ('Bypass', 0)
     ]
     for pair in defaults:
@@ -168,7 +168,7 @@ def unbind_source(
     )
 
     #ind_bound = np.zeros(0, dtype=int)
-    ind_bound = np.arange(len(m))
+    #ind_bound = np.arange(len(m))
     
     if params['ReturnBE']:
         return ind_bound, u
