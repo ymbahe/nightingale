@@ -13,7 +13,7 @@ from galaxies import SnapshotGalaxies, TargetGalaxy
 from particles import SnapshotParticles
 from ion import Output
 
-import gc
+#import gc
 
 from pdb import set_trace
 
@@ -89,9 +89,9 @@ def main():
             if subhaloes.depth[ish] != idepth:
                 continue
 
-            gc.collect()
+            #gc.collect()
             #if idepth == 1 and ish == 4000: set_trace()
-            if idepth == 1 and ish >= 5000: break
+            #if idepth == 1 and ish >= 5000: break
             #if ish < 4000: continue
             #if idepth == 1 and ish >= 10000: gc.collect()
             
@@ -147,7 +147,6 @@ def main():
 
     # Write output
     #output.write()
-
 
 
 if __name__ == "__main__":

@@ -53,15 +53,7 @@ def load_subhalo_catalogue_nightingale(
     ]
 
     if par['Sources']['Neighbours']:
-        if par['Sources']['RadiusTypeFree'] == 'HalfMass':
-            names.append(('FreeRadii', 'Subhalo/TotalHalfMassRadii'))
-        elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
-            names.append(('FreeRadii', 'Subhalo/MaximumRadii'))
-
-        if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
-            names.append(('SubRadii', 'Subhalo/TotalHalfMassRadii'))
-        elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':
-            names.append(('SubRadii', 'Subhalo/MaximumRadii'))
+        pass
     
     if with_descendants:
         names.append(('DescendantGalaxyIDs', 'Subhalo/DescendantTrackIDs'))

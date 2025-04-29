@@ -32,4 +32,5 @@ class Simulation:
         self.aexps = 1 / (redshifts + 1)
 
     def load_boxsize(self, par):
-        return par['Sim']['Boxsize']
+        return 12.5
+        #return par['Sim']['Boxsize']
