@@ -11,13 +11,13 @@
 
 # General settings for simulation to process
 Sim:
-  RootDir: '/cosma8/data/dp004/colibre/Runs/L0012N0094/Thermal'
+  RootDir: '/cosma8/data/dp004/colibre/Runs/L0012N0188/Thermal'
   RedshiftFile: 'output_list.txt'
   SnapshotFile: 'snapshots/colibre_XXXX/colibre_XXXX.hdf5'
   SubhaloFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   SubhaloParticleFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   RedshiftsAreAexp: False
-  Snapshot: 126
+  Snapshot: 120
   Boxsize: 12.5
 
 InputHaloes:
@@ -27,14 +27,13 @@ InputHaloes:
 # How much output the code should produce (lower = less)
 Verbose:      2   # Default: 0
 
-
 # Sources for particles that are tested for satellite membership
 Sources:
   
   # Include particles within a given radius of the input halo centre? 
   Neighbours:   True
-  RadiusType:   'EncloseRadius'
-  ExtentFactor: 2.0
+  RadiusType:   'HalfMass' #'HalfMass'  # 'Enclosing'
+  ExtentFactor: 2.0  # 2.0
 
   # Particles that were in the galaxy in the previous snapshot?
   Prior:     True     # Default: True
@@ -106,7 +105,9 @@ Input:
     ParticleInternalEnergies: InternalEnergies
     ParticleFOFIndex: FOFGroupIDs
 
-  LoadWaitlist: True
+  LoadWaitlist: False
+  WriteWaitlist: False
+  DelayWaitlist: False
 
   # Include bondary particles (only useful for testing, not in SF catalogues)
   IncludeBoundary:    False      
@@ -130,7 +131,7 @@ Input:
 
   # Should previous subhaloes be read from Cantor, instead of SF?
   # This is generally recommended, both for speed and accuracy.
-  FromNightingale:     True                      # Default: True
+  FromNightingale:     False                     # Default: True
 
   # Should we keep track of different particle types? This may
   # be automatically overridden depending on output types...
@@ -167,10 +168,10 @@ Lost:
 # Options for output calculation and writing:
 Output:  
 
-  Directory:       '/cosma8/data/dp004/dc-bahe1/'
-  CatalogueName:   'Nightingale_L12N94_XXXX.hdf5'
-  IDFileName:      'Nightingale_L12N94_XXXX_IDs.hdf5'
-  WaitlistIDFileName: 'Nightingale_XXXX_Waitlist-IDs.hdf5'
+  Directory:       '/cosma8/data/dp004/dc-bahe1/NightingaleTest/L12N188/'
+  CatalogueName:   'Nightingale_L12N188_XXXX_XL2.hdf5'
+  IDFileName:      'Nightingale_L12N188_XXXX_XL2_IDs.hdf5'
+  WaitlistIDFileName: 'Nightingale_L12N188_XXXX_XL2_Waitlist-IDs.hdf5'
   ListCentralsFirst: True
   RecordFinalUnbindingFrame: True
 
