@@ -42,10 +42,17 @@ def load_subhalo_particles_nightingale(property_file, id_file):
 
     return ids_all
 
-def load_subhalo_catalogue_nightingale(property_file):
+def load_subhalo_catalogue_nightingale(property_file, with_descendants=False):
     names = [
         ('GalaxyIDs', 'Subhalo/TrackID'),
+        ('InputHaloIndices', 'Subhalo/InputHalo'),
+        ('Depth', 'Subhalo/Depths'),
+        ('ParentList', 'Subhalo/Parents'),
     ]
+
+    if with_descendants:
+        names.append(('DescendantGalaxyIDs', 'Subhalo/DescendantTrackIDs'))
+
     data = {}
     with h5.File(property_file, 'r') as f:
         for field in names:
@@ -217,15 +224,17 @@ class Output:
         self.subhaloes['GalaxyIDs'] = (
             self.input_sub.galaxy_ids[input_from_output])
         self.subhaloes['Depths'] = self.input_sub.depth[input_from_output]
-
+        self.subhaloes['DescendantGalaxyIDs'] = (
+            self.input_sub.descendant_galaxy_ids[input_from_output])
+        
+        # For the parent list we have to translate the entries from internal
+        # to output indices, ignoring any non-existing ones (negative)
         out_parents = self.input_sub.parent_list[input_from_output, :]
         ind_real = np.nonzero(out_parents >= 0)
-        out_parents[ind_real[0], ind_real[1]] = output_from_input[out_parents[ind_real[0], ind_real[1]]]
+        out_parents[ind_real[0], ind_real[1]] = (
+            output_from_input[out_parents[ind_real[0], ind_real[1]]])
         self.subhaloes['Parents'] = out_parents
-        set_trace()
-        print("BBB")
         
-
     def count_particles(self):
         """Compute the particle count and mass of all input subhaloes."""
 
@@ -422,6 +431,32 @@ class Output:
         hdf5.write_data(
             file_name, grp + 'TrackID', self.subhaloes['GalaxyIDs'],
             comment = "Track ID for each subhalo index, from input catalogue."
+        )
+
+        # Subhalo --> parents
+        hdf5.write_data(
+            file_name, grp + 'Parents', self.subhaloes['Parents'],
+            comment = "Parent subhaloes for each subhalo in the catalogue. "
+            "The second index corresponds to the depth in the subhalo "
+            "hierarchy, so 0 gives the top-level parent of each subhalo."
+        )
+        hdf5.write_data(
+            file_name, grp + 'Depths', self.subhaloes['Depths'],
+            comment = "Depth of each subhalo in the hierarchy. 0 means that "
+            "it is a central, 1 a top-level satellite, and >= 2 refers to "
+            "satellites of satellites. Note that this is based on the "
+            "hierarchy at infall and may not be physically meaningful, "
+            "for example a subhalo with a formal depth of 2 may well have "
+            "become unbound from its immediate parent since infall and now "
+            "really be an 'independent' (depth 1) subhalo, and vice versa."
+        )
+
+        # Subhalo --> DescendantGalaxy
+        hdf5.write_data(
+            file_name, grp + 'DescendantTrackIDs',
+            self.subhaloes['DescendantGalaxyIDs'],
+            comment="Track IDs of the descendant of each subhalo in the next "
+            "snapshot."
         )
         
         # Subhalo --> FOF
