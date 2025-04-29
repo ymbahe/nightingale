@@ -576,7 +576,7 @@ class TargetGalaxy(GalaxyBase):
         include_l7 = False
         include_l8 = False
 
-        origins = np.zeros(0, dtype=np.int64)
+        origins = np.zeros(0, dtype=int)
         ids = np.zeros(0, dtype=np.uint64)
         
         # Level 1: particles that were in the galaxy itself in prior
@@ -584,8 +584,11 @@ class TargetGalaxy(GalaxyBase):
             l1_ids = prior_subhaloes.find_galaxy_particle_ids(self.igal)
             ids = np.concatenate((ids, l1_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l1_ids), dtype=np.int8) + 1))
+                (origins, np.zeros(len(l1_ids)) + 1))
 
+            set_trace()
+            print("BBB")
+            
         """
         # Level 2: particles that were in a galaxy (in the prior snapshot)
         # that merged with this galaxy by the target snapshot
