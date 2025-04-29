@@ -6,9 +6,12 @@ Started 17 Feb 2025.
 import numpy as np
 import monk
 from pdb import set_trace
+import tools
 
 def unbind_source(
-    r, v, m, u, rhalo_init, vhalo_init, hubble_z, status=None, params={}):
+    r, v, m, u, rhalo_init, vhalo_init, hubble_z, boxsize, aexp, status=None, 
+    params={}
+):
     """
     Run MONK to reduce input particles to their self-bound subset.
 
@@ -104,6 +107,13 @@ def unbind_source(
         m = m.astype(np.float32)
     if u.dtype != np.float32:
         u = u.astype(np.float32)    
+
+    # Take periodic wrapping into account (!!)
+    rhalo_init_true = np.array(rhalo_init, copy=True)
+    r -= rhalo_init
+    rhalo_init[:] = 0
+    tools.periodic_wrapping(r, boxsize)
+    r *= aexp
 
     # Positions and velocities must be combined to 6D phase space
     pos6d = np.concatenate((r, v), axis=1)
