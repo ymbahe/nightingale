@@ -230,6 +230,15 @@ class SplitList:
             The elements that lie in the desired quantity range.
         """
 
+        if index < 0:
+            print(f"ERROR! Called SplitList with negative index!")
+            set_trace()
+        if (index + 1) >= len(self.splits):
+            print(f"INFO: trying to retrieve index {index} from SplitList "
+                  f"that only has a length of {len(self.splits)}.")
+            return np.zeros(0, dtype=int)
+
+        # At this point, we can safely index the list (hopefully...)
         return self.argsort[self.splits[index]:self.splits[index+1]]
 
 def key_to_attribute_name(key):
