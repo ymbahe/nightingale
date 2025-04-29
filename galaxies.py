@@ -623,7 +623,7 @@ class TargetGalaxy(GalaxyBase):
         #ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
         #origins[ind_0] = -origins[ind_0]
 
-        return inds, origins
+        return inds[:10], origins[:10]
 
 
     def unicate_ids(self, ids_full, origins_full):      # Class: Galaxy
