@@ -260,6 +260,13 @@ class SnapshotParticles(ParticlesBase):
     def update_membership(self, galaxy_particles, galaxy):
         """Incorporate unbinding result into the particle catalogue."""
 
+        # Don't do anything if the subhalo has less than the minimum number
+        # of particles at this point. Its particles can then be claimed by
+        # any other eligible subhalo, or otherwise will go to the central.
+        min_npart = self.par['Galaxies']['Threshold']['All']
+        if len(galaxy_particles.ind_bound) < min_npart:
+            return
+
         ish = galaxy.ish
         subhaloes = galaxy.subhaloes
         boxsize = subhaloes.sim.boxsize

@@ -196,7 +196,8 @@ Output:
   # is not actually in the galaxy
   COPAtUnbinding:         True              # Default: True
 
-  MinimumNumberOfParticles: 10
+  # Minimum number of particles *at output writing* to be considered
+  MinimumNumberOfParticles:  0              # Default: 0
 
 # Options for unbinding:
 Unbinding:
