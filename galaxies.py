@@ -155,8 +155,9 @@ class SnapshotGalaxies(GalaxyBase):
         """Retrieve the velocity of a subhalo."""
         return self.velocities[ish, :]
 
+    """
     def get_subhaloes_in_sphere(self, cen, r, cen_sh=None):
-        """Find subhaloes within a sphere"""
+    
         if not hasattr(self, 'tree'):
             boxsize = self.sim.boxsize
             self.tree = cKDTree(
@@ -172,6 +173,7 @@ class SnapshotGalaxies(GalaxyBase):
             return ind_ngbs[subind]
         else:
             return ind_ngbs
+    """
         
     def find_parent_particle_ids(self, igal):
         """Find the particle IDs in all parents of a specified galaxy."""

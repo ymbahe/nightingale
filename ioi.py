@@ -55,15 +55,15 @@ def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
             names.append(('FreeRadii', 'RHalfComoving'))
         elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
             names.append(('FreeRadii', 'REncloseComoving'))
-        else:
-            set_trace()
-            
-        if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
-            names.append(('SubRadii', 'RHalfComoving'))
-        elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':
-            names.append(('SubRadii', 'REncloseComoving'))
-        else:
-            set_trace()
+        #else:
+        #    set_trace()
+        #    
+        #if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
+        #    names.append(('SubRadii', 'RHalfComoving'))
+        #elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':
+        #    names.append(('SubRadii', 'REncloseComoving'))
+        #else:
+        #    set_trace()
 
     return names
 

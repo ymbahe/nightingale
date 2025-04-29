@@ -296,9 +296,7 @@ class Output:
 
     def compute_output_quantities(self):
         """Compute what we want to know about the subhaloes."""
-        pass
-        
-        """
+
         print("Computing galaxy properties... ", end='', flush=True)
 
         particles = self.particles
@@ -367,7 +365,6 @@ class Output:
 
         lib = c.cdll.LoadLibrary(ObjectFile)
         succ = lib.galquant(nargs, argv)
-        """
 
     def write(self):
         """Write the output to disk."""
