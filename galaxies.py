@@ -47,7 +47,7 @@ class SnapshotGalaxies(GalaxyBase):
             with_descendants = True
         elif self.kind == 'target':
             with_parents = True
-            with_descendants = False
+            with_descendants = True
         else:
             print(f"Unexpected subhaloes type '{self.kind}'!")
             set_trace()
@@ -56,7 +56,8 @@ class SnapshotGalaxies(GalaxyBase):
             with_parents=with_parents, with_descendants=with_descendants)
         self.subhalo_data_type = None
         if self.par['Input']['FromNightingale'] and self.kind == 'prior':
-            subhalo_data = ion.load_subhalo_catalogue_nightingale(subhalo_file)
+            subhalo_data = ion.load_subhalo_catalogue_nightingale(
+                subhalo_file, with_descendants=with_descendants)
             self.subhalo_data_type = 'Nightingale'
         elif self.par['InputHaloes']['UseSOAP']:
             subhalo_data = ioi.load_subhalo_catalogue_soap(
@@ -82,19 +83,21 @@ class SnapshotGalaxies(GalaxyBase):
         if self.kind == 'prior':
             return
         
-        # Assign a fake 'FOF' index to unhosted subhaloes
+        # Assign a fake 'FOF' index to unhosted subhaloes. But first record
+        # how many real FOFs there are, i.e. where the fake ones begin
+        self.maxfof = np.max(self.fof)
+
         ind_unhosted = np.nonzero(self.fof < 0)[0]
         print(f"There are {len(ind_unhosted)} unhosted subhaloes!")
-        maxfof = np.max(self.fof)
         subind_central = np.nonzero(
             self.centrals[ind_unhosted] == ind_unhosted)[0]
         subind_satellite = np.nonzero(
             self.centrals[ind_unhosted] != ind_unhosted)[0]
         self.fof[ind_unhosted[subind_central]] = np.arange(
-            maxfof+1, maxfof+1+len(subind_central))
+            self.maxfof+1, self.maxfof+1+len(subind_central))
         self.fof[ind_unhosted[subind_satellite]] = (
             self.fof[self.centrals[ind_unhosted[subind_satellite]]])
-        self.maxfof = maxfof
+
         
     def load_subhalo_particles(self):
         """Load the full particle list for subhaloes.
@@ -118,9 +121,11 @@ class SnapshotGalaxies(GalaxyBase):
         # if this is the prior snapshot (offset == -1)
         if self.snap.offset == -1 and self.par['Input']['LoadWaitlist']:
             waitlist_file = self.snap.nightingale_waitlist_file
+
+            # Load waitlist IDs, as 'list-of-lists' per subhalo
             self.waitlist_particle_ids = (
                 ion.load_waitlist_particles_nightingale(waitlist_file))
-
+            
     def initialize_progenitor_list(self):
         """Initialise the lookup list for progenitors of each galaxy."""
         max_desc_id = np.max(self.descendant_galaxy_ids)
@@ -147,6 +152,9 @@ class SnapshotGalaxies(GalaxyBase):
         
         # Initialize the properties at the level of the galaxy itself.
         ish = self.subhalo_from_galaxy(igal)
+        if ish is None:
+            print(f"Could not find galaxy {igal}!!")
+            set_trace()
         depth = self.depth[ish]
         parents = self.parent_list[ish, :] 
 
@@ -181,8 +189,12 @@ class SnapshotGalaxies(GalaxyBase):
         """Find the subhalo index of a given galaxy ID"""
         if not hasattr(self, 'galaxy_to_subhalo'):
             self.set_up_galaxy_to_subhalo_array()
-        return self.galaxy_to_subhalo[igal]
-
+        try:
+            return self.galaxy_to_subhalo[igal]
+        except IndexError:
+            print(f"WARNING! Attempt to look up invalid galaxy ID {igal}!")
+            return None
+        
     def fof_from_subhalo_index(self, ish):
         """Get the FOF group for one or more subhalo indices."""
         fof = self.fof[ish]
@@ -210,8 +222,11 @@ class SnapshotGalaxies(GalaxyBase):
 
         # We have the *galaxy* ID, but may want its subhalo index
         if return_subhalo:
-            parent = self.subhalo_from_galaxy[parent]
-
+            parent = self.subhalo_from_galaxy(parent)
+            if parent is None:
+                print(f"WARNING/ISSUE: parent {parent} has invalid galaxy ID!")
+                set_trace()
+            
         return parent
     
     def set_up_galaxy_to_subhalo_array(self):
@@ -224,6 +239,9 @@ class SnapshotGalaxies(GalaxyBase):
     def find_galaxy_particle_ids(self, igal):
         """Find the particle IDs for a specified galaxy."""
         ish = self.subhalo_from_galaxy(igal)
+        if ish is None:
+            print(f"WARNING! Could not find subhalo for galaxy {igal}!!")
+            return np.zeros(0, dtype=np.uint64)
         return self.find_subhalo_particle_ids(ish)
 
     def find_mergee_particle_ids(self, igal):
@@ -239,7 +257,10 @@ class SnapshotGalaxies(GalaxyBase):
         """Find subhaloes that will merge with a galaxy in the next snap."""
         if not hasattr(self, 'progenitors'):
             self.initialize_progenitor_list()
-        mergee_subhaloes = self.progenitors(igal)
+        try:
+            mergee_subhaloes = self.progenitors(igal)
+        except IndexError:
+            set_trace()
         return mergee_subhaloes
 
     def find_subhalo_particle_ids(self, ish):
@@ -251,15 +272,38 @@ class SnapshotGalaxies(GalaxyBase):
     def find_galaxy_waitlist_ids(self, igal):
         """Find particle IDs that are on the waitlist for a given galaxy."""
         ish = self.subhalo_from_galaxy(igal)
+        if ish is None:
+            print(f"WARNING! Could not find galaxy {igal}!!")
+            set_trace()
         return self.find_waitlist_particle_ids(ish)
 
     def find_waitlist_particle_ids(self, ish):
-        """Retrieve the waitlist particle IDs for a given subhalo."""
-        return self.waitlist_particle_ids[ish]
+        """Retrieve the waitlist particle IDs for a given subhalo.
+        
+        Note that `self.waitlist_particle_ids` is a list-of-arrays, with
+        entry i containing all IDs for subhalo i.
+        """
+
+        # The waitlist IDs are grouped by *input* halo index, because they
+        # are written before output subhaloes are found. If the snapshot was
+        # loaded from input (HBT) this does not matter, but if it is loaded
+        # from Nightingale then we have to translate the main internal subhalo
+        # index (Nightingale) to input (HBT)
+        if self.subhalo_data_type == 'Nightingale':
+            ish_input = self.input_halo_indices[ish]
+        else:
+            ish_input = ish
+        return self.waitlist_particle_ids[ish_input]
 
     def find_top_level_parents(self):
         """Find the top-level parent subhalo for all subhaloes."""
 
+        # If we already read in a full parent list, then this is trivial:
+        if hasattr(self, 'parent_list'):
+            return self.parent_list[:, 0]
+
+        # Ok, no pre-existing parent list. Initialise one and then do it
+        # the hard way.
         self.parent_list = None
         
         # Can't do anything if there are no subhaloes...
@@ -279,6 +323,11 @@ class SnapshotGalaxies(GalaxyBase):
         
         for iit in range(max_depth):
             gal_parent = self.parent_galaxy_ids[curr_parent]
+
+            # We need to process those galaxies that have a valid parent.
+            # This excludes ones for which we have reached the top-level
+            # parent (central), but also those where an intermediate
+            # parent is non-existing.
             ind_process = np.nonzero(gal_parent >= 0)[0]
             print(
                 f"Iteration {iit}, processing {len(ind_process)} galaxies...")
@@ -287,6 +336,9 @@ class SnapshotGalaxies(GalaxyBase):
                 break
             curr_parent[ind_process] = (
                 self.subhalo_from_galaxy(gal_parent[ind_process]))
+            if curr_parent[ind_process] is None:
+                print(f"WARNING! Invalid galaxy lookup in parent finding.")
+                set_trace()
             self.parent_list[ind_process, self.depth[ind_process]-iit-1] = (
                 curr_parent[ind_process])
             
@@ -295,8 +347,25 @@ class SnapshotGalaxies(GalaxyBase):
         if n_sat > 0:
             print(f"Uh oh. We have some satellites left!")
             set_trace()
-            
-        return curr_parent
+
+        # Check that all centrals are sensible...
+        ind_no_cen = np.nonzero(self.parent_list[:, 0] < 0)[0]
+        if len(ind_no_cen) > 0:
+            print(f"WARNING!! There are {len(ind_no_cen)} galaxies without "
+                  f"a valid central in snapshot {self.snap.isnap}!!")
+            subind_in_fof = np.nonzero(self.fof[ind_no_cen] >= 0)[0]
+            if len(subind_in_fof) > 0:
+                print(f"WARNING!! {len(subind_in_fof)} of them are in a valid "
+                      f"FOF!")
+                set_trace()
+
+            # Galaxies that don't have a valid parent or FOF are hard to deal
+            # with... assume that they are all unhosted centrals.
+            subind_no_fof = np.nonzero(self.fof[ind_no_cen] < 0)[0]
+            self.parent_list[ind_no_cen[subind_no_fof], 0] = (
+                ind_no_cen[subind_no_fof])
+                
+        return self.parent_list[:, 0]
 
     def base_to_main_indices(self, ind_base):
         """Find the main subhalo indices for a given base subhalo indices."""
@@ -419,7 +488,7 @@ class TargetGalaxy(GalaxyBase):
         source_m_real = np.array(source_m, copy=True)
         if np.min(source_m_real) == 0: set_trace()
         if self.par['Unbinding']['PassiveIsMassless']:
-            source_m[origins > 3] = 0
+            source_m[np.abs(origins) > 3] = 0
         source.set_m(source_m)
         source.set_m_real(source_m_real)
         source.set_initial_status()
@@ -510,6 +579,7 @@ class TargetGalaxy(GalaxyBase):
             r_max = subhaloes.get_maximum_extent(self.ish)
             subhalo_cen = subhaloes.get_subhalo_coordinates(self.ish)
             cen_sh = self.subhaloes.centrals[self.ish]
+
             l6_ids = particles.get_ids_in_sphere(subhalo_cen, r_max, cen_sh)
             ids = np.concatenate((ids, l6_ids))
             origins = np.concatenate((origins, np.zeros(len(l6_ids)) + 6))
@@ -545,11 +615,13 @@ class TargetGalaxy(GalaxyBase):
         origins = origins[ind_samefof]
         ids = ids[ind_samefof]
         
-        # Check which IDs are class 0
+        # Check which IDs are class 0. We *do not* set them to zero, but
+        # to minus their original value, so that we can still set passive
+        # particles to massless later.
         ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
-        origins[ind_0] = 0
-        
-        return inds, origins    
+        origins[ind_0] = -origins[ind_0]
+
+        return inds, origins
 
 
     def unicate_ids(self, ids_full, origins_full):      # Class: Galaxy
