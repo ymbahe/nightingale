@@ -71,33 +71,41 @@ def main():
 
     # If we want to unbind centrals WITH satellites still attached, that
     # needs to happen here...
-    
+
     # Main loop over galaxies to assemble, unbind, and assign particles.
-    for ish in range(subhaloes.n_input_subhaloes):
+    # We process subhaloes in inverse order of depth.
+    for idepth in range(np.max(subhaloes.depth), 0, -1):
+        for ish in range(subhaloes.n_input_subhaloes):
 
-        # Don't bother with 'fake' subhaloes or centrals
-        if subhaloes.number_of_bound_particles[ish] <= 0:
-            continue
-        if subhaloes.depth[ish] == 0:
-            continue
-        print(f"Subhalo {ish} -- Depth = {subhaloes.depth[ish]}, "
-              f"N_bound_input = {subhaloes.number_of_bound_particles[ish]}")
+            # Only process the subhalo in this turn if its depth is the one
+            # that is currently being analysed
+            if subhaloes.depth[ish] != idepth:
+                continue
+            
+            # Don't bother with 'fake' subhaloes
+            if subhaloes.number_of_bound_particles[ish] <= 0:
+                continue
+            print(f"Subhalo {ish} -- Depth = {subhaloes.depth[ish]}, "
+                  f"N_bound_input = "
+                  f"{subhaloes.number_of_bound_particles[ish]}"
+            )
         
-        # Initialise the galaxy with basic information
-        galaxy = TargetGalaxy(subhaloes, ish)
+            # Initialise the galaxy with basic information
+            galaxy = TargetGalaxy(subhaloes, ish)
 
-        # Find the source particles of the galaxy (separate from
-        # initialisation to allow for easier swapping)
-        galaxy_particles = galaxy.find_source_particles()
-        if galaxy_particles is None:
-            continue
+            # Find the source particles of the galaxy (separate from
+            # initialisation to allow for easier swapping)
+            galaxy_particles = galaxy.find_source_particles()
+            if galaxy_particles is None:
+                continue
 
-        # Perform gravitational unbinding
-        final_subhalo_coords, m_bound = galaxy_particles.unbind()
-        subhaloes.register_unbinding_result(ish, final_subhalo_coords, m_bound)
-        
-        # Update full particle membership
-        particles.update_membership(galaxy_particles, galaxy)
+            # Perform gravitational unbinding
+            final_subhalo_coords, m_bound = galaxy_particles.unbind()
+            subhaloes.register_unbinding_result(
+                ish, final_subhalo_coords, m_bound)
+            
+            # Update full particle membership
+            particles.update_membership(galaxy_particles, galaxy)
 
     # Filter out 'waitlist' particles
     particles.filter_out_waitlist()
