@@ -263,9 +263,18 @@ class SnapshotParticles(ParticlesBase):
         ish = galaxy.ish
         subhaloes = galaxy.subhaloes
         boxsize = subhaloes.sim.boxsize
+        depth = subhaloes.depth[ish]
         
         bound_inds = galaxy.source_indices[galaxy_particles.ind_bound]
         bound_origins = galaxy_particles.origins[galaxy_particles.ind_bound]
+
+        # Set the origin flag of particles taken from parents to minus the
+        # current subhalo's depth. This way if there is a conflict between
+        # multiple subhaloes claiming the same particle, it will go to the
+        # one lowest down in the hierarchy.
+        ind_from_parent = np.nonzero(bound_origins < 0)[0]
+        bound_origins[ind_from_parent] = -depth
+
         bound_dpos = (
             self.coordinates[bound_inds, :]
             - subhaloes.new_coordinates[ish, :]
@@ -289,37 +298,45 @@ class SnapshotParticles(ParticlesBase):
     def filter_out_waitlist(self):
         """Filter out and reset particles that are on the wait list."""
         ind_waitlist = np.nonzero(self.origins == 6)[0]
-        waitlist_split = tools.SplitList(
-            self.subhalo_indices[ind_waitlist],
-            np.arange(self.subhaloes.n_input_subhaloes + 1)
-        )
 
-        n_sh = self.subhaloes.n_input_subhaloes
-        offsets = np.zeros(n_sh + 1, dtype=int)
-        ids = np.zeros(len(ind_waitlist), dtype=np.uint64) - 1
+        if self.par['Input']['WriteWaitlist']:
+            waitlist_split = tools.SplitList(
+                self.subhalo_indices[ind_waitlist],
+                np.arange(self.subhaloes.n_input_subhaloes + 1)
+            )
 
-        curr_offset = 0
-        for ish in range(n_sh):
-            inds_sh = ind_waitlist[waitlist_split(ish)]
-            ids_sh = self.ids[inds_sh]
-            n_ids_sh = len(ids_sh)
-            offsets[ish + 1] = curr_offset + n_ids_sh
-            ids[curr_offset : curr_offset + n_ids_sh] = ids_sh
-            curr_offset += n_ids_sh
+            n_sh = self.subhaloes.n_input_subhaloes
+            offsets = np.zeros(n_sh + 1, dtype=int)
+            ids = np.zeros(len(ind_waitlist), dtype=np.uint64) - 1
 
-        ion.write_waitlist_particles(self.snapshot.nightingale_waitlist_file,
-            ids, offsets)
+            curr_offset = 0
+            for ish in range(n_sh):
+                inds_sh = ind_waitlist[waitlist_split(ish)]
+                ids_sh = self.ids[inds_sh]
+                n_ids_sh = len(ids_sh)
+                offsets[ish + 1] = curr_offset + n_ids_sh
+                ids[curr_offset : curr_offset + n_ids_sh] = ids_sh
+                curr_offset += n_ids_sh
+
+            ion.write_waitlist_particles(
+                self.snapshot.nightingale_waitlist_file, ids, offsets)
 
         # Reset waitlist particles to their central
-        self.subhalo_indices[ind_waitlist] = (
-            self.subhaloes.centrals[self.subhalo_indices[ind_waitlist]])
-
+        if self.par['Input']['DelayWaitlist']:
+            self.subhalo_indices[ind_waitlist] = (
+                self.subhaloes.centrals[self.subhalo_indices[ind_waitlist]])
+                        
     def switch_memberships_to_output(self, output_shis):
         """Update particle membership to output subhalo IDs and trim."""
 
-        # Update subhalo indices to new. This will automatically set any
-        # particle in a too-small subhalo to -1 (unbound).
-        self.subhalo_indices = output_shis[self.subhalo_indices]
+        # Update subhalo indices to new. Any particles in too-small subhaloes
+        # are re-assigned to their centrals (bad fix...)
+        new_subhalo_indices = output_shis[self.subhalo_indices]
+        ind_in_too_small_sh = np.nonzero(
+            (self.subhalo_indices >= 0) & (new_subhalo_indices < 0))[0]
+        new_subhalo_indices[ind_in_too_small_sh] = (
+            self.subhaloes.centrals[self.subhalo_indices[ind_in_too_small_sh]])
+        self.subhalo_indices = new_subhalo_indices
         self.reject_unbound()
 
     def reject_unbound(self):
@@ -351,7 +368,6 @@ class SnapshotParticles(ParticlesBase):
         self.origins = self.origins[source_indices]
         if hasattr(self, 'fof'):
             self.fof = self.fof[source_indices]
-
             
         # Re-calculate number of particles by type
         self.n_pt = np.bincount(self.ptypes, minlength=6)
@@ -396,6 +412,7 @@ class GalaxyParticles(ParticlesBase):
         self.galaxy = galaxy
         self.snap = galaxy.snap
         self.verbose = self.snap.verbose
+        self.sim = galaxy.sim
 
     def check_number_consistency(self, quant):
         """Check that the number of elements agrees with internal size."""
@@ -449,7 +466,8 @@ class GalaxyParticles(ParticlesBase):
         ind_bound = unbinding.unbind_source(
             self.r, self.v, self.m, self.u,
             self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
-            status=self.initial_status, params=monk_params
+            self.sim.boxsize, self.snap.aexp, status=self.initial_status,
+            params=monk_params
         )
         
         # Also need to record unbinding result...
@@ -472,8 +490,12 @@ class GalaxyParticles(ParticlesBase):
         # Find the coordinates of the 'most bound' (lowest PE) particle,
         # to be returned. This is easy because MONK internally moves this
         # particle to the front of the returned list.
-        ind_mostbound = ind_bound[0]
-        halo_centre_of_potential = self.r[ind_mostbound, :]
+        if len(ind_bound) == 0:
+            print("WARNING!! NO BOUND PARTICLE!!")
+            halo_centre_of_potential = [-1000, -1000, -1000]
+        else:
+            ind_mostbound = ind_bound[0]
+            halo_centre_of_potential = self.r[ind_mostbound, :]
 
         # Compute the total bound mass after the end of MONK
         m_bound_after_monk = np.sum(self.m[ind_bound])
