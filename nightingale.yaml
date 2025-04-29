@@ -11,13 +11,13 @@
 
 # General settings for simulation to process
 Sim:
-  RootDir: '/cosma8/data/dp004/colibre/Runs/L0012N0188/Thermal'
+  RootDir: '/cosma8/data/dp004/colibre/Runs/L0012N0094/Thermal'
   RedshiftFile: 'output_list.txt'
   SnapshotFile: 'snapshots/colibre_XXXX/colibre_XXXX.hdf5'
   SubhaloFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   SubhaloParticleFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
   RedshiftsAreAexp: False
-  Snapshot: 120
+  Snapshot: 127
   Boxsize: 12.5
 
 InputHaloes:
@@ -168,10 +168,10 @@ Lost:
 # Options for output calculation and writing:
 Output:  
 
-  Directory:       '/cosma8/data/dp004/dc-bahe1/NightingaleTest/L12N188/'
-  CatalogueName:   'Nightingale_L12N188_XXXX_XL2.hdf5'
-  IDFileName:      'Nightingale_L12N188_XXXX_XL2_IDs.hdf5'
-  WaitlistIDFileName: 'Nightingale_L12N188_XXXX_XL2_Waitlist-IDs.hdf5'
+  Directory:       '/cosma8/data/dp004/dc-bahe1/NightingaleTest/L12N94/'
+  CatalogueName:   'Nightingale_L12N94_XXXX_XL2.hdf5'
+  IDFileName:      'Nightingale_L12N94_XXXX_XL2_IDs.hdf5'
+  WaitlistIDFileName: 'Nightingale_L12N94_XXXX_XL2_Waitlist-IDs.hdf5'
   ListCentralsFirst: True
   RecordFinalUnbindingFrame: True
 
