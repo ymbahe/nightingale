@@ -357,7 +357,7 @@ class Output:
         kappaCo_p = self.subhaloes['KappaCo'].ctypes.data_as(c.c_void_p)
         smr_p = self.subhaloes['StellarRadii'].ctypes.data_as(c.c_void_p)
         rhalf_p = self.subhaloes['TotalHalfMassRadii'].ctypes.data_as(c.c_void_p)
-        """
+        
         nargs = 34
         myargv = c.c_void_p * 34
         argv = myargv(c.addressof(c_numPart), 
@@ -373,7 +373,6 @@ class Output:
 
         lib = c.cdll.LoadLibrary(ObjectFile)
         succ = lib.galquant(nargs, argv)
-        """
 
     def write(self):
         """Write the output to disk."""
