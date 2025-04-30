@@ -120,7 +120,7 @@ class SnapshotGalaxies(GalaxyBase):
 
         # Load the particle IDs from the 'wait list' if we need to and
         # if this is the prior snapshot (offset == -1)
-        if self.snap.offset == -1 and self.par['Input']['LoadWaitlist']:
+        if self.snap.offset == -1 and self.par['Sources']['Waitlist']:
             waitlist_file = self.snap.nightingale_waitlist_file
 
             # Load waitlist IDs, as 'list-of-lists' per subhalo
@@ -135,8 +135,6 @@ class SnapshotGalaxies(GalaxyBase):
         
     def get_maximum_extent(self, ish, rad_type):
         """Find the maximum extent of a subhalo"""
-        if not self.par['Sources']['Neighbours']:
-            return 0
         if rad_type == 'free':
             extent_factor = self.par['Sources']['ExtentFactorFree']
             return self.free_radii[ish] * extent_factor
@@ -732,7 +730,7 @@ class TargetGalaxy(GalaxyBase):
             l10_ids = np.zeros(0, dtype=np.uint64)
             
         # Level 8: particles from the last snapshot's 'waiting list'
-        if include_l8 and self.par['Input']['LoadWaitlist']:
+        if include_l8:
             l8_ids = prior_subhaloes.find_galaxy_waitlist_ids(self.igal)
             ids = np.concatenate((ids, l8_ids))
             origins = np.concatenate(

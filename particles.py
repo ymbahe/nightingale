@@ -52,9 +52,8 @@ class SnapshotParticles(ParticlesBase):
         velocities = np.zeros((0, 3), dtype=np.float32)
         internal_energies = np.zeros(0)
 
-        # Also need to load particles' FOF IDs if we want to load full FOFs.
-        if self.par['Input']['ProcessFullFOF']:
-            fof_ids = np.zeros(0, dtype=int)
+        # Also need to load particles' FOF IDs
+        fof_ids = np.zeros(0, dtype=int)
 
         self.n_pt = np.zeros(6, dtype=int)
         self.n_parts = 0
@@ -115,18 +114,15 @@ class SnapshotParticles(ParticlesBase):
                     curr_u = np.zeros(n_curr)
                 internal_energies = np.concatenate((internal_energies, curr_u))
 
-                # Record the type of each particle, if desired
-                if self.par['Input']['RecordParticleType']:
-                    curr_ptype = np.zeros(n_pt, dtype=np.int8) + ptype
-                    ptypes = np.concatenate((ptypes, curr_ptype))
+                curr_ptype = np.zeros(n_pt, dtype=np.int8) + ptype
+                ptypes = np.concatenate((ptypes, curr_ptype))
 
-                # Load FOF indices, if desired
-                if self.par['Input']['ProcessFullFOF']:
-                    curr_fof = f[pt_name + '/' + fof_name][...]
-                    if len(curr_fof) != n_pt:
-                        print("Inconsistent length of FOF IDs!")
-                        set_trace()
-                    fof_ids = np.concatenate((fof_ids, curr_fof))
+                # Load FOF indices
+                curr_fof = f[pt_name + '/' + fof_name][...]
+                if len(curr_fof) != n_pt:
+                    print("Inconsistent length of FOF IDs!")
+                    set_trace()
+                fof_ids = np.concatenate((fof_ids, curr_fof))
 
         # Store properties as attributes
         self.ids = ids
@@ -135,8 +131,7 @@ class SnapshotParticles(ParticlesBase):
         self.coordinates = coordinates
         self.velocities = velocities
         self.internal_energies = internal_energies
-        if self.par['Input']['ProcessFullFOF']:
-            self.fof = fof_ids
+        self.fof = fof_ids
 
         self.n_parts = np.sum(self.n_pt)
         if self.n_parts != self.ids.shape[0]:
@@ -269,7 +264,7 @@ class SnapshotParticles(ParticlesBase):
         # Don't do anything if the subhalo has less than the minimum number
         # of particles at this point. Its particles can then be claimed by
         # any other eligible subhalo, or otherwise will go to the central.
-        min_npart = self.par['Galaxies']['Threshold']['All']
+        min_npart = self.par['Galaxies']['Threshold']
         if len(galaxy_particles.ind_bound) < min_npart:
             return
 
@@ -379,8 +374,7 @@ class SnapshotParticles(ParticlesBase):
         self.internal_energies = self.internal_energies[source_indices]
         self.subhalo_indices = self.subhalo_indices[source_indices]
         self.origins = self.origins[source_indices]
-        if hasattr(self, 'fof'):
-            self.fof = self.fof[source_indices]
+        self.fof = self.fof[source_indices]
             
         # Re-calculate number of particles by type
         self.n_pt = np.bincount(self.ptypes, minlength=6)
