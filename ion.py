@@ -13,19 +13,19 @@ def form_nightingale_property_file(par, isnap):
     """Form the property file name for a given snapshot."""
     catalogue_name = par['Output']['CatalogueName']
     catalogue_name = catalogue_name.replace('XXXX', f'{isnap:04d}')
-    return par['Output']['Directory'] + catalogue_name
+    return par['Output']['Directory'] + catalogue_name + '.hdf5'
 
 def form_nightingale_id_file(par, isnap):
     """Form the subhalo ID file name for a given snapshot."""
-    id_name = par['Output']['IDFileName']
-    id_name = id_name.replace('XXXX', f'{isnap:04d}')
-    return par['Output']['Directory'] + id_name
+    catalogue_name = par['Output']['CatalogueName']
+    catalogue_name = catalogue_name.replace('XXXX', f'{isnap:04d}')
+    return par['Output']['Directory'] + catalogue_name + '_IDs.hdf5'
 
 def form_nightingale_waitlist_file(par, isnap):
     """Form the waitlist ID file name for a given snapshot."""
-    file_name = par['Output']['WaitlistIDFileName']
-    file_name = file_name.replace('XXXX', f'{isnap:04d}')
-    return par['Output']['Directory'] + file_name
+    catalogue_name = par['Output']['CatalogueName']
+    catalogue_name = catalogue_name.replace('XXXX', f'{isnap:04d}')
+    return par['Output']['Directory'] + catalogue_name + '_Waitlist.hdf5'
 
 def load_subhalo_particles_nightingale(property_file, id_file):
     with h5.File(property_file, 'r') as f:
@@ -293,9 +293,9 @@ class Output:
 
         if self.par['RecordFinalUnbindingFrame']:
             self.subhaloes['FinalUnbindingCentres'] = (
-                self.input_sub.get_coordinates(shi_in))
+                self.input_sub.get_coordinates(shi_in, kind='monk'))
             self.subhaloes['FinalUnbindingVelocities'] = (
-                self.input_sub.get_velocities(shi_in))
+                self.input_sub.get_velocities(shi_in, kind='monk'))
 
     def compute_cop(self, shi):
         """Compute the centre of potential for (input) subhaloes."""

@@ -53,7 +53,7 @@ class SnapshotParticles(ParticlesBase):
         internal_energies = np.zeros(0)
 
         # Also need to load particles' FOF IDs if we want to load full FOFs.
-        if self.par['Input']['LoadFullFOF']:
+        if self.par['Input']['ProcessFullFOF']:
             fof_ids = np.zeros(0, dtype=int)
 
         self.n_pt = np.zeros(6, dtype=int)
@@ -121,7 +121,7 @@ class SnapshotParticles(ParticlesBase):
                     ptypes = np.concatenate((ptypes, curr_ptype))
 
                 # Load FOF indices, if desired
-                if self.par['Input']['LoadFullFOF']:
+                if self.par['Input']['ProcessFullFOF']:
                     curr_fof = f[pt_name + '/' + fof_name][...]
                     if len(curr_fof) != n_pt:
                         print("Inconsistent length of FOF IDs!")
@@ -135,7 +135,7 @@ class SnapshotParticles(ParticlesBase):
         self.coordinates = coordinates
         self.velocities = velocities
         self.internal_energies = internal_energies
-        if self.par['Input']['LoadFullFOF']:
+        if self.par['Input']['ProcessFullFOF']:
             self.fof = fof_ids
 
         self.n_parts = np.sum(self.n_pt)
@@ -211,10 +211,8 @@ class SnapshotParticles(ParticlesBase):
         The details differ depending on whether we process full FOFs or only
         particles in subhaloes, so we just delegate to an appropriate function.
         """
-        if self.par['Input']['LoadFullFOF']:
-            print("WARNING!!! NOT DOING WHAT IT SHOULD BE!!!")
-            self.initialize_memberships_from_subhaloes()
-            #self.initialize_memberships_from_fof()   TEMPORARY
+        if self.par['Input']['ProcessFullFOF']:
+            self.initialize_memberships_from_fof()
         else:
             self.initialize_memberships_from_subhaloes()
 

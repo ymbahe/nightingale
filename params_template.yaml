@@ -1,0 +1,178 @@
+# --------------------------------------------------------------------
+# --------- Parameter file for NIGHTINGALE ---------------------------
+# --------------------------------------------------------------------
+
+# All parameters should have CamelCase style keys. Do not use underscores
+# in the parameter names (indicates nested dict structure in output Header).
+# All parameters should have a comment indicating their meaning in the line(s)
+# directly above them (unless it is obvious, e.g. 'Verbose'), and the 
+# default value afterwards (which is purely for documentation purpose, the
+# default value does not enter the code anywhere).
+
+# General settings for simulation to process
+Sim:
+  RootDir: '/cosma8/data/dp004/colibre/Runs/L0012N0188/Thermal'
+  RedshiftFile: 'output_list.txt'
+  SnapshotFile: 'snapshots/colibre_XXXX/colibre_XXXX.hdf5'
+  SubhaloFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
+  SubhaloParticleFile: 'HBTplus/XXXX/SubSnap_XXXX.0.hdf5'
+  RedshiftsAreAexp: False
+  Snapshot: 127
+  Boxsize: 12.5
+
+# Specify the input subhalo catalogue
+InputHaloes:
+  HBTDir: 'HBTplus'
+  UseSOAP: False                     # Default: False
+  FromNightingale: True              # Default: True
+  
+# How much output the code should produce (lower = less)
+Verbose:      2   # Default: 0
+
+# Sources for particles that are tested for satellite membership
+Sources:
+
+  # Particles that were in the galaxy in the previous snapshot?
+  Prior:     True                    # Default: True
+
+  # Particles that in the previous snapshot were in a galaxy that has now
+  # merged with the target galaxy?
+  Mergees:   True                    # Default: True
+
+  # Particles that were in a subhalo near the target galaxy?
+  SubhaloNeighbours: True            # Default: True
+  RadiusTypeSubhaloes: 'Enclosing'   # 'HalfMass' or 'Enclosing' (default)
+  ExtentFactorSubhaloes: 1.25        # Default: 1.25
+
+  # Particles in the corresponding input subhalo in the target snap?
+  InputHalo: True                    # Default: True
+
+  # Particles that were in the target galaxies two snapshots back?
+  PrePrior: True                     # Default: True
+  
+  # Particles near the target galaxy that were not in a (satellite) subhalo?
+  FreeNeighbours: True               # Default: True
+  RadiusTypeFree: 'HalfMass'         # 'HalfMass' (default) or 'Enclosing'
+  ExtentFactorFree: 2.0              # Default: 2.0
+
+  # Particles from 'waiting list' (bound new in previous snapshot)?
+  LoadWaitlist: True                 # Default: True
+
+  # Write new waiting list for next snapshot? This can be enabled separately
+  # from 'LoadWaitlist' in case we are processing only a few snapshots and
+  # the first does not have a waitlist.
+  WriteWaitlist: True                # Default: True
+
+
+# Options for candidate galaxy list
+Galaxies:
+  # Unbind particles from centrals before marking satellites?
+  UnbindCensWithSats:    False        # Default: False
+
+  # Unbind particles from central after marking satellites?	
+  UnbindCensAfterSats:   False        # Default: False
+
+  # Initialize particles in satellites to their central? This should only
+  # be disabled for tests.
+  InitializeSatsToCen:  True         # Default: True
+
+  # Unbind satellites from centrals? Setting this to False probably only 
+  # makes sense as a testing option, or to generate analogous output
+  # for the input catalogue.
+  UnbindSats:         True           # Default: True
+
+  # Particle number thresholds to be considered as subhalo:
+  Threshold: 10                      # Default: 10
+
+
+# Options for loading input particles:
+Input:
+  # Define the names for datasets to load
+  Names:
+    ParticleIDs: ParticleIDs
+    ParticleMasses: Masses
+    BHParticleMasses: DynamicalMasses
+    ParticleCoordinates: Coordinates
+    ParticleVelocities: Velocities
+    ParticleInternalEnergies: InternalEnergies
+    ParticleFOFIndex: FOFGroupIDs
+
+  # Include bondary particles (only relevant for zooms, and probably only
+  # useful for testing)
+  IncludeBoundary:   False      
+           
+  # Consider all particles in FOF, including ones that are not in any subhalo
+  # (will abort if neither UnbindCensWithSats or UnbindCensAfterSats is set)
+  ProcessFullFOF:    True
+
+  # Initialize satellite galaxies to centrals?
+  # This should only be disabled for testing. If central unbinding is also
+  # enabled, this will cause all sats to be classed as unbound.
+  InitializeSatsToCen:     True             # Default: True
+
+
+# Options for output calculation and writing:
+Output:
+  # Output directory and base for file names
+  Directory:       '/cosma8/data/dp004/dc-bahe1/NightingaleTest/L12N188/'
+  CatalogueName:   'Nightingale_L12N188_XXXX_TL2'
+
+  # Should we force centrals of each group to be listed first? If False, the
+  # first-listed galaxy will be the most massive one instead.
+  ListCentralsFirst: True        # Default: True
+
+  # Should we record the coordinates and velocity of the final (converged)
+  # frame in the unbinding procedure?
+  RecordFinalUnbindingFrame: False    # Default: True
+
+  # Full path to C library to compute output quantities
+  GalQuantObjectFile: '/cosma/home/dp004/dc-bahe1/repos/GALQUANT/galquant.so'
+
+  # Compute CentreOfPotential immediately after unbinding, instead of after
+  # *all* galaxies are unbound? This may mean that the 'central' particle
+  # is not actually in the galaxy
+  COPAtUnbinding:         True              # Default: True
+
+  # Minimum number of particles *at output writing* to be considered
+  MinimumNumberOfParticles:  0              # Default: 0
+
+
+# Options for unbinding:
+Unbinding:
+
+  # Treat passive source particles as permanently massless (1), or only
+  # as initially unbound (0)?
+  PassiveIsMassless: 1                   # Default: 1
+
+  # Treat passive source particles as initially unbound?
+  PassiveIsUnbound: 0                    # Default: 0
+
+# Options for MONK engine:
+Monk:
+
+  # Verbosity level of MONK:
+  Verbose:           0                    # Default: 0
+
+  # Use monotonic unbinding mode (1, instead of 'vdBO-like', 0) for sats?
+  Monotonic: 1                            # Default: 1
+
+  # Center on ZMF for satellites (0), or 10% most-bound particles (1)?
+  Centering: 1                            # Default: 1
+
+  # Allow varying centre for satellites (0) or keep fixed (1)?
+  FixCentre: 0                            # Default: 0
+
+  # Bypass Monk completely (testing only!! --> keeps all particles as bound)
+  Bypass: False                           # Default: False
+
+  # Tree opening criterion within MONK -- larger means less accurate.
+  PotErrTol: 1.0                          # Default: 1.0
+  
+# Debugging and testing options:
+Check:
+
+  # Cadence of full reporting for galaxy unbinding (every Nth):
+  ReportFrequency: 1000
+
+  # Debug option to suppress Hubble flow
+  NoHubble:  False             # Default: False

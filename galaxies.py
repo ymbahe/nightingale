@@ -439,14 +439,26 @@ class SnapshotGalaxies(GalaxyBase):
         # We don't need the new coordinates anymore, so we can free memory
         del self.new_coordinates
 
-    def get_coordinates(self, shi):
+    def get_coordinates(self, shi, kind='mostbound'):
         """Retrieve the (updated) coordinates for input subhalo[es]."""
-        return self.coordinates[shi, :]
-
-    def get_velocities(self, shi):
-        """Retrieve the (updated) velocities for input subhalo[es]."""
-        return self.velocities[shi, :]
+        if kind == 'mostbound':
+            return self.coordinates[shi, :]
+        elif kind == 'monk':
+            return self.monk_coordinates[shi, :]
+        else:
+            print(f"Unknown coordinate type '{kind}'!")
+            set_trace()
         
+    def get_velocities(self, shi, kind='zmf'):
+        """Retrieve the (updated) velocities for input subhalo[es]."""
+        if kind == 'zmf':
+            return self.velocities[shi, :]
+        elif kind == 'monk':
+            return self.monk_velocities[shi, :]
+        else:
+            print(f"Unknown velocity type '{kind}'!")
+            set_trace()
+
     def build_particle_memberships(self, particles):
         """Build an input subhalo membership list for all particles."""
 
