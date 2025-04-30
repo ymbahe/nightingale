@@ -573,14 +573,13 @@ class TargetGalaxy(GalaxyBase):
         pre_prior_subhaloes = self.sim.prePriorSnap.subhaloes
 
         # Hardcode selection for now
-        include_l1 = True
-        include_l2 = True
-        include_l3 = True
-        include_l4 = True
-        include_l5 = True
-        include_l6 = True
-        include_l7 = True
-        include_l8 = True
+        include_l1 = self.par['Sources']['Prior']
+        include_l2 = self.par['Sources']['Mergees']
+        include_l3 = self.par['Sources']['SubhaloNeighbours']
+        include_l4 = self.par['Sources']['InputHalo']
+        include_l5 = self.par['Sources']['PrePrior']
+        include_l7 = self.par['Sources']['FreeNeighbours']
+        include_l8 = self.par['Sources']['Waitlist']
 
         # Initialise the (empty) arrays to hold source IDs and their origins.
         # IMPORTANT: the data types here must not be changed. This seems

@@ -49,7 +49,7 @@ Sources:
   ExtentFactorFree: 2.0              # Default: 2.0
 
   # Particles from 'waiting list' (bound new in previous snapshot)?
-  LoadWaitlist: True                 # Default: True
+  Waitlist: True                 # Default: True
 
   # Write new waiting list for next snapshot? This can be enabled separately
   # from 'LoadWaitlist' in case we are processing only a few snapshots and
