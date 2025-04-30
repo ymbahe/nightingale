@@ -190,3 +190,7 @@ def load_subhalo_particles_external(subhalo_particle_file, base_indices=None):
         ids = ids[base_indices]
     return ids
 
+def load_boxsize(snapshot_file):
+    """Load the boxsize from a specified snapshot file."""
+    with h5.File(snapshot_file, 'r') as f:
+        return f['Header'].attrs['BoxSize'][0]

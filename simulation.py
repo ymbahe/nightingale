@@ -15,7 +15,7 @@ class Simulation:
     def __init__(self, par):
         self.par = par
         self.load_redshifts(par)
-        self.boxsize = self.load_boxsize(par)
+        self.boxsize = None  # Dummy, will be loaded from snapshot
 
     def load_redshifts(self, par):
         """Load the redshift information for the simulation."""
@@ -31,5 +31,3 @@ class Simulation:
         self.redshifts = redshifts
         self.aexps = 1 / (redshifts + 1)
 
-    def load_boxsize(self, par):
-        return 12.5
