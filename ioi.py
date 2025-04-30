@@ -50,12 +50,13 @@ def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
         names.append(('ParentGalaxyIDs', 'NestedParentTrackId'))
     if with_descendants:
         names.append(('DescendantGalaxyIDs', 'DescendantTrackId'))
-    if par['Sources']['Neighbours']:
+    if par['Sources']['FreeNeighbours']:
         if par['Sources']['RadiusTypeFree'] == 'HalfMass':
             names.append(('FreeRadii', 'RHalfComoving'))
         elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
             names.append(('FreeRadii', 'REncloseComoving'))
 
+    if par['Sources']['FreeNeighbours']:
         if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
             names.append(('SubRadii', 'RHalfComoving'))
         elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':

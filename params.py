@@ -61,43 +61,13 @@ def override_parameters(par, args):
 def setup(par):
     """Set derived parameters and do consistency checks."""
 
-    # Form snapshot file:
-    snap_str = f'{par['Sim']['Snapshot']:04d}'
-    #par['Sim']['SnapshotFile'] = (
-    #    par['Sim']['SnapshotFile'].replace('XXX', snap_str))
-
     # Set derived parameters:
-    if (par['Lost']['FindTemporarilyLost'] or 
-        par['Lost']['FindPermanentlyLost']):
-        par['Lost']['Recover'] = True
-    else:
-        par['Lost']['Recover'] = False
-
     if par['Input']['IncludeBoundary']:
         par['Input']['TypeList'] = np.arange(6, dtype = np.int8)
     else:
         par['Input']['TypeList'] = np.array([0, 1, 4, 5])
 
-    # Consistency checks and warnings:
-    #if par['Lost']['FindPermanentlyLost'] and not par['Input']['FromCantor']:
-    #    raise Exception("Unbinding lost galaxies requires "
-    #                    "loading CANTOR input.")
-    
-    if par['Sources']['Sats'] or par['Sources']['FOF']:
-        if not par['Input']['RegularizedCens']:
-            eprint("WARNING", textPad = 60, linestyle = '=')
-            print("Including root sat/fof particles without using regularized")
-            print("cen-sat input may lead to nonsensical results.")
-            print("")
-            
-        if not par['Input']['FromNightingale']:
-            eprint("WARNING", textPad = 60, linestyle = '=')
-            print("Including root sat/fof particles without re-using Nightingale")
-            print("output may lead to nonsensical results.")
-            print("")
-
-    if (not par['Output']['COPAtUnbinding'] 
-        or par['Output']['WriteBindingEnergy']):
+    if (not par['Output']['COPAtUnbinding']):
         par['Monk']['ReturnBindingEnergy'] = 1
     else:
         par['Monk']['ReturnBindingEnergy'] = 0
@@ -106,15 +76,6 @@ def setup(par):
         eprint("INCONSISTENCY", textPad = 60, linestyle = '@')
         #raise Exception("Cannot use previous snapshot without "
         #                "loading Nightingale output.")
-
-    if par['Lost']['MaxLostSnaps'] is None:
-        par['Lost']['MaxLostSnaps'] = np.inf
-
-    if (par['Lost']['Recover'] and par['Sources']['Subfind'] 
-        and not par['Sources']['Prior']):
-        eprint("WARNING", textPad = 60, linestyle = '=')
-        print("Included subfind particles and included lost")
-        print("galaxies, but not loaded previous Cantor particles.")
 
     # Write parameter structure to output:
     print("\n----------------------------------------------------------")

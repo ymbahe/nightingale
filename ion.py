@@ -52,12 +52,13 @@ def load_subhalo_catalogue_nightingale(
         ('Coordinates', 'Subhalo/CentresOfPotential'),
     ]
 
-    if par['Sources']['Neighbours']:
+    if par['Sources']['SubhaloNeighbours']:
         if par['Sources']['RadiusTypeFree'] == 'HalfMass':
             names.append(('FreeRadii', 'Subhalo/TotalHalfMassRadii'))
         elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
             names.append(('FreeRadii', 'Subhalo/MaximumRadii'))
 
+    if par['Sources']['FreeNeighbours']:
         if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
             names.append(('SubRadii', 'Subhalo/TotalHalfMassRadii'))
         elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':
