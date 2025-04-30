@@ -8,7 +8,7 @@ import numpy as np
 from pdb import set_trace
 
 def subhalo_data_names(par, with_parents=False, with_descendants=False):
-    if par['InputHaloes']['UseSOAP']:
+    if par['Input']['UseSOAP']:
         return subhalo_data_names_soap(
             par, with_parents=with_parents, with_descendants=with_descendants)
     else:

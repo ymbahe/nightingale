@@ -211,6 +211,9 @@ class SnapshotParticles(ParticlesBase):
         The details differ depending on whether we process full FOFs or only
         particles in subhaloes, so we just delegate to an appropriate function.
         """
+        if not self.par['Input']['InitializeSatsToCen']:
+            return
+
         if self.par['Input']['ProcessFullFOF']:
             self.initialize_memberships_from_fof()
         else:

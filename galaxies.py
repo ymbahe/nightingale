@@ -60,7 +60,7 @@ class SnapshotGalaxies(GalaxyBase):
             subhalo_data = ion.load_subhalo_catalogue_nightingale(
                 subhalo_file, with_descendants=with_descendants)
             self.subhalo_data_type = 'Nightingale'
-        elif self.par['InputHaloes']['UseSOAP']:
+        elif self.par['Input']['UseSOAP']:
             subhalo_data = ioi.load_subhalo_catalogue_soap(
                 subhalo_file, subhalo_data_names)
             self.subhalo_data_type = 'SOAP'
