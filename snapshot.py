@@ -70,3 +70,6 @@ class Snapshot:
             print(f"Subhalo particle file: '{self.subhalo_particle_file}'")
             print(f"Nightingale catalogue: '{self.nightingale_property_file}'")
             print(f"Nightingale ID file: '{self.nightingale_id_file}'")
+
+        if self.sim.boxsize is None:
+            self.sim.boxsize = ioi.load_boxsize(self.snapshot_file)
