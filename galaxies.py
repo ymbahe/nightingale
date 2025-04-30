@@ -562,31 +562,38 @@ class TargetGalaxy(GalaxyBase):
 
         # Hardcode selection for now
         include_l1 = True
-        include_l2 = False
-        include_l3 = False
-        include_l4 = False
-        include_l5 = False
-        include_l6 = False
-        include_l7 = False
-        include_l8 = False
+        include_l2 = True
+        include_l3 = True
+        include_l4 = True
+        include_l5 = True
+        include_l6 = True
+        include_l7 = True
+        include_l8 = True
 
-        origins = np.zeros(0, dtype=np.int8)
+        # Initialise the (empty) arrays to hold source IDs and their origins.
+        # IMPORTANT: the data types here must not be changed. This seems
+        # nonsensical for origins (it should be int), but apparently the
+        # concatenation of ints leads to weird garbage collection errors in
+        # combination with MONK (even though MONK does not use origins).
+        # The low values that origins takes can all be represented perfectly
+        # as floats, and we convert to the more sensible np.int8 on return. 
         ids = np.zeros(0, dtype=np.uint64)
+        origins = np.zeros(0)
         
         # Level 1: particles that were in the galaxy itself in prior
         if include_l1:
             l1_ids = prior_subhaloes.find_galaxy_particle_ids(self.igal)
             ids = np.concatenate((ids, l1_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l1_ids), dtype=np.int8) + 1))
-        
+                (origins, np.zeros(len(l1_ids)) + 1))
+
         # Level 2: particles that were in a galaxy (in the prior snapshot)
         # that merged with this galaxy by the target snapshot
         if include_l2:
             l2_ids = prior_subhaloes.find_mergee_particle_ids(self.igal)
             ids = np.concatenate((ids, l2_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l2_ids), dtype=np.int8) + 2))
+                (origins, np.zeros(len(l2_ids)) + 2))
 
         # Level 3/6: particles that were in another subhalo in the prior
         # snapshot. Particles that were in a subhalo that is a child of the
@@ -618,16 +625,21 @@ class TargetGalaxy(GalaxyBase):
             ind_children = ind_pl[0]
             depth_par = ind_pl[1]
 
-            if len(ind_children) < 0:
+            # Some consistency checks on identified child subhaloes
+            if len(ind_children) > 0:
                 if (np.min(depth_par) < prior_depth or
                     np.max(depth_par) > prior_depth):
                     set_trace()
                 ind_pc = np.nonzero(
-                    prior_subhaloes.parent_list[sphere_haloes[ind_children], :] == sphere_haloes[ind_children, None])
+                    prior_subhaloes.parent_list[
+                        sphere_haloes[ind_children], :]
+                    == sphere_haloes[ind_children, None]
+                )
                 if np.min(ind_pc[1] <= prior_depth):
                     print("How can children be higher than parents?!")
                     set_trace()
-                if np.max(np.abs(ind_pc[0] - np.arange(len(ind_children)))) > 0:
+                if np.max(
+                        np.abs(ind_pc[0] - np.arange(len(ind_children)))) > 0:
                     print("Inconsistency in children parent info...")
                     set_trace()
                     
@@ -643,7 +655,7 @@ class TargetGalaxy(GalaxyBase):
                 l3_ids = children_ids[subind_free]
                 ids = np.concatenate((ids, l3_ids))
                 origins = np.concatenate(
-                    (origins, np.zeros(len(l3_ids), dtype=np.int8) + 3))
+                    (origins, np.zeros(len(l3_ids)) + 3))
                 
             # Filter out unrelated haloes and store their IDs. We cannot
             # add them yet, because then they would be out of order for their
@@ -667,7 +679,7 @@ class TargetGalaxy(GalaxyBase):
             l4_ids = subhaloes.find_subhalo_particle_ids(self.ish)
             ids = np.concatenate((ids, l4_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l4_ids), dtype=np.int8) + 4))
+                (origins, np.zeros(len(l4_ids)) + 4))
             
         # ---------------- Passive categories below ------------------------
             
@@ -676,13 +688,13 @@ class TargetGalaxy(GalaxyBase):
             l5_ids = pre_prior_subhaloes.find_galaxy_particle_ids(self.igal)
             ids = np.concatenate((ids, l5_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l5_ids), dtype=np.int8) + 5))
+                (origins, np.zeros(len(l5_ids)) + 5))
 
         # Level 6 is already dealt with above -- unrelated subhaloes. Just
         # need to include the IDs here, so that they are in the right place
         ids = np.concatenate((ids, l6_ids))
         origins = np.concatenate(
-            (origins, np.zeros(len(l6_ids), dtype=np.int8) + 6))
+            (origins, np.zeros(len(l6_ids)) + 6))
         
         # Level 7/10: any particles that are within a certain distance from the
         # (input) subhalo centre. Gas particles are assigned origin code 7
@@ -703,7 +715,7 @@ class TargetGalaxy(GalaxyBase):
             
             ids = np.concatenate((ids, l7_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l7_ids), dtype=np.int8) + 7))
+                (origins, np.zeros(len(l7_ids)) + 7))
         else:
             l7_ids = np.zeros(0, dtype=np.uint64)
             l10_ids = np.zeros(0, dtype=np.uint64)
@@ -713,12 +725,12 @@ class TargetGalaxy(GalaxyBase):
             l8_ids = prior_subhaloes.find_galaxy_waitlist_ids(self.igal)
             ids = np.concatenate((ids, l8_ids))
             origins = np.concatenate(
-                (origins, np.zeros(len(l8_ids), dtype=np.int8) + 8))
+                (origins, np.zeros(len(l8_ids)) + 8))
 
         # Finally, Level 10 (waitlist)
         ids = np.concatenate((ids, l10_ids))
         origins = np.concatenate(
-            (origins, np.zeros(len(l10_ids), dtype=np.int8) + 10))
+            (origins, np.zeros(len(l10_ids)) + 10))
 
         # We now have the full list, including duplications. For bookkeeping,
         # let's record how long that list is
@@ -763,8 +775,7 @@ class TargetGalaxy(GalaxyBase):
         ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
         origins[ind_0] = -origins[ind_0]
 
-        return inds, origins
-
+        return inds, origins.astype(np.int8)
 
     def unicate_ids(self, ids_full, origins_full):      # Class: Galaxy
         """Remove duplicates from the internally-loaded particle list."""
