@@ -51,11 +51,6 @@ Sources:
   # Particles from 'waiting list' (bound new in previous snapshot)?
   Waitlist: True                 # Default: True
 
-  # Write new waiting list for next snapshot? This can be enabled separately
-  # from 'LoadWaitlist' in case we are processing only a few snapshots and
-  # the first does not have a waitlist.
-  WriteWaitlist: True                # Default: True
-
 
 # Options for candidate galaxy list
 Galaxies:
@@ -104,7 +99,7 @@ Input:
            
   # Consider all particles in FOF, including ones that are not in any subhalo
   # (will abort if neither UnbindCensWithSats or UnbindCensAfterSats is set)
-  ProcessFullFOF:    True
+  ProcessFullFOF:    False
 
   # Initialize satellite galaxies to centrals?
   # This should only be disabled for testing. If central unbinding is also
@@ -136,6 +131,11 @@ Output:
 
   # Minimum number of particles *at output writing* to be considered
   MinimumNumberOfParticles:  0              # Default: 0
+
+  # Write new waiting list for next snapshot? This can be enabled separately
+  # from 'LoadWaitlist' in case we are processing only a few snapshots and
+  # the first does not have a waitlist.
+  WriteWaitlist: True                # Default: True
 
 
 # Options for unbinding:
