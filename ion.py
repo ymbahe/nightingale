@@ -9,6 +9,14 @@ import tools
 import hdf5
 import ctypes as c
 
+def write_timedata(data, par, isnap):
+    catalogue_name = par['Output']['CatalogueName']
+    catalogue_name = catalogue_name.replace('XXXX', f'{isnap:04d}')
+    outloc = par['Output']['Directory'] + '/' + catalogue_name + '_Times.hdf5'
+    with h5.File(outloc, 'w') as o:
+       for key in data:
+           o[key] = data[key]
+    
 def form_nightingale_property_file(par, isnap):
     """Form the property file name for a given snapshot."""
     catalogue_name = par['Output']['CatalogueName']
@@ -164,6 +172,7 @@ class Output:
             'ParticleOffsetsByAperture': np.zeros(
                 (n_sub, 6, 5), dtype=np.int64) - 1,
             'TotalMasses': np.zeros(n_sub, dtype=np.float32),
+            'TotalMassesAfterUnbinding': np.zeros(n_sub, dtype=np.float32),
             'MassesByType': np.zeros((n_sub, 6, 5), dtype=np.float32),
             'MaximumCircularVelocities': np.zeros(
                 n_sub, dtype=np.float32) + np.nan,
@@ -291,7 +300,11 @@ class Output:
 
         # Store the result
         self.subhaloes['CentresOfPotential'] = cop
-
+        self.subhaloes['TotalMassesAfterUnbinding'] = (
+            self.input_sub.m_bound_after_unbinding[shi_in])
+        self.subhaloes['PassiveMassesAfterUnbinding'] = (
+            self.input_sub.m_passive_after_unbinding[shi_in])
+        
         if self.par['RecordFinalUnbindingFrame']:
             self.subhaloes['FinalUnbindingCentres'] = (
                 self.input_sub.get_coordinates(shi_in, kind='monk'))
@@ -325,13 +338,20 @@ class Output:
 
         # Particle input data (must provide all as they will be re-ordered)
         mass_p = particles.masses.ctypes.data_as(c.c_void_p)
+        if particles.masses.dtype != np.float32: set_trace()
         pos_p = particles.coordinates.ctypes.data_as(c.c_void_p)
+        if particles.coordinates.dtype != np.float64: set_trace()
         vel_p = particles.velocities.ctypes.data_as(c.c_void_p)
+        if particles.velocities.dtype != np.float32: set_trace()
         type_p = particles.ptypes.ctypes.data_as(c.c_void_p)
+        if particles.ptypes.dtype != np.int8: set_trace()
         shi_p = particles.subhalo_indices.ctypes.data_as(c.c_void_p)
+        if particles.subhalo_indices.dtype != np.int32: set_trace()
         rad_p = particles.radii.ctypes.data_as(c.c_void_p)
+        if particles.radii.dtype != np.float32: set_trace()
         ids_p = particles.ids.ctypes.data_as(c.c_void_p)
-
+        if particles.ids.dtype != np.uint64: set_trace()
+        
         if np.min(particles.subhalo_indices) < 0: set_trace()
         
         # Output fields
@@ -575,6 +595,21 @@ class Output:
             file_name, grp + 'TotalMasses',
             self.subhaloes['TotalMasses'],
             comment = "Total mass of each subhalo (units: 10^10 M_Sun)."
+        )
+        hdf5.write_data(
+            file_name, grp + 'TotalMassesAfterUnbinding',
+            self.subhaloes['TotalMassesAfterUnbinding'],
+            comment = "Total mass of each subhalo *immediately after its own "
+            "unbinding* (units: 10^10 M_Sun). If this deviates significantly "
+            "from TotalMasses, the segmentation may not be well converged."
+        )
+        hdf5.write_data(
+            file_name, grp + 'PassiveMassesAfterUnbinding',
+            self.subhaloes['PassiveMassesAfterUnbinding'],
+            comment = "Total passive mass of each subhalo *immediately after its own "
+            "unbinding* (units: 10^10 M_Sun). If this deviates significantly "
+            "from TotalMassesAfterUnbinding, the segmentation may not be well "
+            "converged."
         )
         hdf5.write_data(
             file_name, grp + 'MassesByType',
