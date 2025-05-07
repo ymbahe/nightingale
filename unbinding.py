@@ -98,6 +98,8 @@ def unbind_source(
         The indices (into the input particles) that are bound.
     """
 
+    n_part = len(r)
+    
     # Make sure all inputs are in the required format and convert them if not
     if r.dtype != np.float64:
         r = r.astype(np.float64)
@@ -110,13 +112,17 @@ def unbind_source(
 
     # Take periodic wrapping into account (!!)
     rhalo_init_true = np.array(rhalo_init, copy=True)
-    r -= rhalo_init
+    r_rel = np.array(r, copy=True)
+    r_rel -= rhalo_init
     rhalo_init[:] = 0
-    tools.periodic_wrapping(r, boxsize)
-    r *= aexp
+    tools.periodic_wrapping(r_rel, boxsize)
+    r_rel *= aexp
+
+    # Internal energies have an aexp^-2 factor...
+    u *= aexp**(-2)
 
     # Positions and velocities must be combined to 6D phase space
-    pos6d = np.concatenate((r, v), axis=1)
+    pos6d = np.concatenate((r_rel, v), axis=1)
 
     # Set particles to initially bound, unless specified otherwise:
     if status is None:
@@ -137,12 +143,15 @@ def unbind_source(
 
     # TEST
     params['Verbose'] = 0
-            
+    if n_part > 100000: params['Verbose'] = 1
+    if n_part > 500000: params['Verbose'] = 2
+
+    params['Verbose'] = 3
+    
     # Debugging/testing option that completely bypasses MONK:
     if params['Bypass']:
         ind_bound = np.arange(n_part, dtype=int)
         return ind_bound
-
 
     # Call MONK to find bound particles:
     # (Disable maxGap as removed from code)
@@ -167,9 +176,6 @@ def unbind_source(
         params['ReturnBE']      # Return (Binding) Energy
     )
 
-    #ind_bound = np.zeros(0, dtype=int)
-    ind_bound = np.arange(len(m))
-    
     if params['ReturnBE']:
         return ind_bound, u
     else:
