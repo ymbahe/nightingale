@@ -19,7 +19,7 @@ class ParticlesBase:
 
 class SnapshotParticles(ParticlesBase):
 
-    def __init__(self, snapshot):
+    def __init__(self, snapshot, build_memberships=True):
         self.snapshot = snapshot
         self.par = snapshot.par
         self.subhaloes = snapshot.subhaloes
@@ -28,9 +28,9 @@ class SnapshotParticles(ParticlesBase):
         self.n_parts = None
 
         # Load the relevant particle properties into local attributes
-        self.load_properties()
+        self.load_properties(build_memberships)
 
-    def load_properties(self):
+    def load_properties(self, build_memberships=True):
         """Load the relevant particle properties for this snapshot."""
         par = self.par
         snap_file = self.snapshot.snapshot_file
@@ -114,7 +114,7 @@ class SnapshotParticles(ParticlesBase):
                     curr_u = np.zeros(n_curr)
                 internal_energies = np.concatenate((internal_energies, curr_u))
 
-                curr_ptype = np.zeros(n_pt, dtype=np.int8) + ptype
+                curr_ptype = np.zeros(n_pt, dtype=np.int8) + np.int8(ptype)
                 ptypes = np.concatenate((ptypes, curr_ptype))
 
                 # Load FOF indices
@@ -128,18 +128,25 @@ class SnapshotParticles(ParticlesBase):
         self.ids = ids
         self.ptypes = ptypes
         self.masses = masses
-        self.coordinates = coordinates
+        self.coordinates = np.clip(coordinates, 0, self.sim.boxsize-1e-10)
         self.velocities = velocities
         self.internal_energies = internal_energies
         self.fof = fof_ids
 
+        n_nan = np.count_nonzero((self.coordinates * 0 != 0) | (self.velocities * 0 != 0))
+        if n_nan > 0:
+            print(f"NaNs...!")
+            set_trace()
+        
         self.n_parts = np.sum(self.n_pt)
         if self.n_parts != self.ids.shape[0]:
             print("Inconsistent particle lengths!!")
             set_trace()
 
         # Second part: get membership info...
-        self.subhalo_indices = self.subhaloes.build_particle_memberships(self)
+        if build_memberships:
+            self.subhalo_indices = self.subhaloes.build_particle_memberships(
+                self)
 
         
     def ids_to_indices(self, ids):
@@ -307,7 +314,7 @@ class SnapshotParticles(ParticlesBase):
         """Filter out and reset particles that are on the wait list."""
         ind_waitlist = np.nonzero(np.abs(self.origins) == 10)[0]
 
-        if self.par['Input']['WriteWaitlist']:
+        if self.par['Output']['WriteWaitlist']:
             waitlist_split = tools.SplitList(
                 self.subhalo_indices[ind_waitlist],
                 np.arange(self.subhaloes.n_input_subhaloes + 1)
@@ -330,9 +337,8 @@ class SnapshotParticles(ParticlesBase):
                 self.snapshot.nightingale_waitlist_file, ids, offsets)
 
         # Reset waitlist particles to their central
-        if self.par['Input']['DelayWaitlist']:
-            self.subhalo_indices[ind_waitlist] = (
-                self.subhaloes.centrals[self.subhalo_indices[ind_waitlist]])
+        self.subhalo_indices[ind_waitlist] = (
+            self.subhaloes.centrals[self.subhalo_indices[ind_waitlist]])
                         
     def switch_memberships_to_output(self, output_shis):
         """Update particle membership to output subhalo IDs and trim."""
@@ -375,7 +381,9 @@ class SnapshotParticles(ParticlesBase):
         self.subhalo_indices = self.subhalo_indices[source_indices]
         self.origins = self.origins[source_indices]
         self.fof = self.fof[source_indices]
-            
+        if hasattr(self, 'radii'):
+            self.radii = self.radii[source_indices]
+        
         # Re-calculate number of particles by type
         self.n_pt = np.bincount(self.ptypes, minlength=6)
         n_part_now = np.sum(self.n_pt)
@@ -465,11 +473,16 @@ class GalaxyParticles(ParticlesBase):
         # TODO: import params from parameters
         monk_params = {'Bypass': False, 'UseTree': 1, 'ReturnBE': 0}
 
+        n_nan = np.count_nonzero(self.r * 0 != 0)
+        if n_nan > 0:
+            print(f"NaNs... halo {self.galaxy.ish}.")
+            set_trace()
+
         n_tot = len(self.m)
         n_passive = np.count_nonzero(self.m == 0)
         print(
             f"Now unbinding subhalo {self.galaxy.ish}.\n"
-            f"There are {n_passive} passive particles out of {n_tot}...")
+            f"There are {n_passive} passive particles out of {n_tot}...", flush=True)
         ind_bound = unbinding.unbind_source(
             self.r, self.v, self.m, self.u,
             self.galaxy.r_init, self.galaxy.v_init, self.snap.hubble_z,
@@ -481,14 +494,19 @@ class GalaxyParticles(ParticlesBase):
         self.ind_bound = ind_bound
         
         if self.verbose:
-            for iorigin in range(7):
-                n_source = np.count_nonzero(self.origins == iorigin)
+            for iorigin in range(11):
+                n_source = np.count_nonzero(np.abs(self.origins) == iorigin)
                 n_final = np.count_nonzero(
-                    self.origins[ind_bound] == iorigin)
+                    np.abs(self.origins[ind_bound]) == iorigin)
                 print(f"Origin {iorigin}: {n_source} --> {n_final}")
         
-            # Check how many passive particles ended up becoming bound
-            n_passive_bound = np.count_nonzero(self.m[ind_bound] == 0)
+        # Check how many passive particles ended up becoming bound
+        subind_passive = np.nonzero(
+            (self.m[ind_bound] == 0) &
+            (np.abs(self.origins[ind_bound]) < 10)
+        )[0]
+        n_passive_bound = len(subind_passive)
+        if self.verbose:
             if n_passive_bound > 0.05 * len(ind_bound):
                 print(f"WARNIING: {n_passive_bound} / {len(ind_bound)} bound "
                       f"particles are passive!")
@@ -505,6 +523,8 @@ class GalaxyParticles(ParticlesBase):
             halo_centre_of_potential = self.r[ind_mostbound, :]
 
         # Compute the total bound mass after the end of MONK
-        m_bound_after_monk = np.sum(self.m[ind_bound])
-        
-        return halo_centre_of_potential, m_bound_after_monk
+        m_bound_after_monk = np.sum(self.m_real[ind_bound])
+        m_passive_after_monk = np.sum(self.m_real[ind_bound[subind_passive]])
+
+        n_massive = np.count_nonzero(self.m > 0)
+        return halo_centre_of_potential, n_massive, m_bound_after_monk, m_passive_after_monk
