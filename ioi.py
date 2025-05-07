@@ -56,7 +56,7 @@ def subhalo_data_names_hbt(par, with_parents=False, with_descendants=False):
         elif par['Sources']['RadiusTypeFree'] == 'Enclosing':
             names.append(('FreeRadii', 'REncloseComoving'))
 
-    if par['Sources']['FreeNeighbours']:
+    if par['Sources']['SubhaloNeighbours']:
         if par['Sources']['RadiusTypeSubhaloes'] == 'HalfMass':
             names.append(('SubRadii', 'RHalfComoving'))
         elif par['Sources']['RadiusTypeSubhaloes'] == 'Enclosing':

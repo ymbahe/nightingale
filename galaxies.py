@@ -11,6 +11,7 @@ from pdb import set_trace
 from particles import GalaxyParticles
 import h5py as h5
 from scipy.spatial import cKDTree
+from timestamp import TimeStamp
 
 class GalaxyBase:
 
@@ -158,7 +159,9 @@ class SnapshotGalaxies(GalaxyBase):
         if not hasattr(self, 'tree'):
             boxsize = self.sim.boxsize
             self.tree = cKDTree(
-                self.coordinates, boxsize=boxsize, leafsize=1024)
+                np.clip(self.coordinates, 0, boxsize-1e-10), boxsize=boxsize,
+                leafsize=1024
+            )
         ind_ngbs = self.tree.query_ball_point(cen, r)
         ind_ngbs = np.array(ind_ngbs)
 
@@ -203,7 +206,8 @@ class SnapshotGalaxies(GalaxyBase):
 
             ids_curr = self.find_subhalo_particle_ids(curr_ish)
             ids = np.concatenate((ids, ids_curr))
-            print(f"   ... added {len(ids_curr)} particle IDs.")
+            if self.verbose:
+                print(f"   ... added {len(ids_curr)} particle IDs.")
 
         if self.verbose:
             print(f"   Found {len(ids)} IDs from {n_parents} parent galaxies.")
@@ -298,7 +302,9 @@ class SnapshotGalaxies(GalaxyBase):
                 set_trace()
             ids = np.zeros(0, dtype=np.uint64)
             for iish in ish:
-                ids = np.concatenate((ids, self.particle_ids[iish]))
+                this_ids = self.particle_ids[iish]
+                if len(this_ids) > 0:
+                    ids = np.concatenate((ids, this_ids))
             return ids
         
     def find_galaxy_waitlist_ids(self, igal):
@@ -412,12 +418,15 @@ class SnapshotGalaxies(GalaxyBase):
         """
         self.new_coordinates = np.zeros((self.n_input_subhaloes, 3)) - 1
         self.m_bound_after_unbinding = np.zeros(self.n_input_subhaloes)
-
-    def register_unbinding_result(self, ish, new_coordinates, bound_mass):
+        self.m_passive_after_unbinding = np.zeros(self.n_input_subhaloes)
+        
+    def register_unbinding_result(self, ish, new_coordinates, bound_mass,
+                                  passive_mass):
         """Register the updated coordinates from unbinding."""
         self.new_coordinates[ish, :] = new_coordinates
         self.m_bound_after_unbinding[ish] = bound_mass
-
+        self.m_passive_after_unbinding[ish] = passive_mass
+        
     def register_new_velocities(self, ish, new_velocities):
         """Register the updated velocities from unbinding."""
         self.new_velocities[ish, :] = new_velocities
@@ -507,23 +516,27 @@ class TargetGalaxy(GalaxyBase):
         instance.
         """
 
+        ts = TimeStamp()
+        
         # Convenience pointer to the the full snapshot particle instance
         particles = self.snap.particles
 
         # Find the source indices (lots of internal heavy lifting)
         print(f"Loading sources... (type={self.subhaloes.subhalo_data_type})")
-        source_inds, origins = self.find_source_indices()
+        source_inds, origins = self.find_source_indices(ts)
 
         if len(source_inds) == 0: return None
         
         # Initialise the particles instance
         source = GalaxyParticles(self)
-
+        ts.set_time('Initialize particles instance')
+        
         # Load all relevant particle info into `source`
         source.set_r(particles.get_property('coordinates', source_inds))
         source.set_v(particles.get_property('velocities', source_inds))
         source.set_u(particles.get_property('internal_energies', source_inds))
         source.set_origins(origins)
+        ts.set_time('Load particle properties')
         
         # For masses, we need to check whether we want to set passive ones
         # permanently to zero or only consider them as 'unbound' in the first
@@ -532,10 +545,11 @@ class TargetGalaxy(GalaxyBase):
         source_m_real = np.array(source_m, copy=True)
         if np.min(source_m_real) == 0: set_trace()
         if self.par['Unbinding']['PassiveIsMassless']:
-            source_m[np.abs(origins) > 3] = 0
+            source_m[np.abs(origins) > 4] = 0
         source.set_m(source_m)
         source.set_m_real(source_m_real)
         source.set_initial_status()
+        ts.set_time('Update passive masses')
         
         # Attach variables of further use to self for easy re-use
         self.source = source
@@ -553,9 +567,23 @@ class TargetGalaxy(GalaxyBase):
         #        o['FOF'] = particles.fof[source_inds]
 
         # It would be a lovely idea to return the result
+
+        if self.verbose:
+            print(f"Origins: ", end='')
+            for  ii in range(11):
+                print(f"[{ii}]: {np.count_nonzero(origins == ii)}", end='')
+                if  ii == 4: print("\n   ", end='')
+                elif ii < 10: print(" -- ", end='')
+            print("")
+
+        ts.set_time("Final bookkeeping")
+        if self.verbose:
+            ts.print_time_usage(
+                f"Source finding for {self.ish}", caption_style='sec')
+
         return source
         
-    def find_source_indices(self):
+    def find_source_indices(self, ts):
         """Gather all particle indices that belong to this galaxy's source.
 
         This involves loading the individual origin categories and then
@@ -570,7 +598,6 @@ class TargetGalaxy(GalaxyBase):
         prior_subhaloes = self.sim.priorSnap.subhaloes
         pre_prior_subhaloes = self.sim.prePriorSnap.subhaloes
 
-        # Hardcode selection for now
         include_l1 = self.par['Sources']['Prior']
         include_l2 = self.par['Sources']['Mergees']
         include_l3 = self.par['Sources']['SubhaloNeighbours']
@@ -588,6 +615,7 @@ class TargetGalaxy(GalaxyBase):
         # as floats, and we convert to the more sensible np.int8 on return. 
         ids = np.zeros(0, dtype=np.uint64)
         origins = np.zeros(0)
+        ts.set_time('Initialization')
         
         # Level 1: particles that were in the galaxy itself in prior
         if include_l1:
@@ -595,7 +623,8 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l1_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l1_ids)) + 1))
-
+        ts.set_time('L1')
+            
         # Level 2: particles that were in a galaxy (in the prior snapshot)
         # that merged with this galaxy by the target snapshot
         if include_l2:
@@ -603,7 +632,8 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l2_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l2_ids)) + 2))
-
+        ts.set_time('L2')
+            
         # Level 3/6: particles that were in another subhalo in the prior
         # snapshot. Particles that were in a subhalo that is a child of the
         # current one and are now unbound get origin 3, particles from an
@@ -618,6 +648,7 @@ class TargetGalaxy(GalaxyBase):
             prior_cen_sh = prior_subhaloes.centrals[prior_ish]
             sphere_haloes = prior_subhaloes.get_subhaloes_in_sphere(
                 subhalo_cen, r_max, prior_cen_sh)
+            ts.set_time('L3a')
             
             # Exclude itself, and any haloes that are parents of the current
             # subhalo
@@ -627,13 +658,44 @@ class TargetGalaxy(GalaxyBase):
             subind_noparent = np.nonzero(
                 ~np.isin(sphere_haloes, own_parents))[0]
             sphere_haloes = sphere_haloes[subind_noparent]
+            ts.set_time('L3b')
             
             # Filter out haloes that are children of the current ont
             ind_pl = np.nonzero(
                 prior_subhaloes.parent_list[sphere_haloes, :] == prior_ish)
             ind_children = ind_pl[0]
             depth_par = ind_pl[1]
+            ts.set_time('L3c')
+            
+            # Find particles that are not bound at this point
+            if len(ind_children) > 0:
+                children_ids = prior_subhaloes.find_subhalo_particle_ids(
+                    sphere_haloes[ind_children])
+                children_indices = particles.ids_to_indices(children_ids)
+                children_shi = particles.subhalo_indices[children_indices]
+                cen_sh = subhaloes.centrals[self.ish]
+                subind_free = np.nonzero(children_shi == cen_sh)[0]
 
+                l3_ids = children_ids[subind_free]
+                ids = np.concatenate((ids, l3_ids))
+                origins = np.concatenate(
+                    (origins, np.zeros(len(l3_ids)) + 3))
+            ts.set_time('L3d')
+                
+            # Filter out unrelated haloes and store their IDs. We cannot
+            # add them yet, because then they would be out of order for their
+            # origin value.
+            mask_children = np.zeros(len(sphere_haloes), dtype=bool)
+            mask_children[ind_children] = True
+            ind_unrelated = np.nonzero(~mask_children)[0]
+
+            if len(ind_unrelated) > 0:
+                l6_ids = prior_subhaloes.find_subhalo_particle_ids(
+                    sphere_haloes[ind_unrelated])
+            else:
+                l6_ids = np.zeros(0, dtype=np.uint64)
+            ts.set_time('L3e')
+                
             # Some consistency checks on identified child subhaloes
             if len(ind_children) > 0:
                 if (np.min(depth_par) < prior_depth or
@@ -651,36 +713,12 @@ class TargetGalaxy(GalaxyBase):
                         np.abs(ind_pc[0] - np.arange(len(ind_children)))) > 0:
                     print("Inconsistency in children parent info...")
                     set_trace()
-                    
-            # Find particles that are not bound at this point
-            if len(ind_children) > 0:
-                children_ids = prior_subhaloes.find_subhalo_particle_ids(
-                    sphere_haloes[ind_children])
-                children_indices = particles.ids_to_indices(children_ids)
-                children_shi = particles.subhalo_indices[children_indices]
-                cen_sh = subhaloes.centrals[self.ish]
-                subind_free = np.nonzero(children_shi == cen_sh)[0]
+            ts.set_time('L3f')
 
-                l3_ids = children_ids[subind_free]
-                ids = np.concatenate((ids, l3_ids))
-                origins = np.concatenate(
-                    (origins, np.zeros(len(l3_ids)) + 3))
-                
-            # Filter out unrelated haloes and store their IDs. We cannot
-            # add them yet, because then they would be out of order for their
-            # origin value.
-            mask_children = np.zeros(len(sphere_haloes), dtype=bool)
-            mask_children[ind_children] = True
-            ind_unrelated = np.nonzero(~mask_children)[0]
-
-            if len(ind_unrelated) > 0:
-                l6_ids = prior_subhaloes.find_subhalo_particle_ids(
-                    sphere_haloes[ind_unrelated])
-            else:
-                l6_ids = np.zeros(0, dtype=np.uint64)
         else:
             l3_ids = np.zeros(0, dtype=np.uint64)
             l6_ids = np.zeros(0, dtype=np.uint64)
+
             
         # Level 4: particles that belong to this galaxy in the target snap,
         # according to the input subhalo catalogue
@@ -689,6 +727,7 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l4_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l4_ids)) + 4))
+        ts.set_time('L4')
             
         # ---------------- Passive categories below ------------------------
             
@@ -698,12 +737,14 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l5_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l5_ids)) + 5))
-
+        ts.set_time('L5')
+            
         # Level 6 is already dealt with above -- unrelated subhaloes. Just
         # need to include the IDs here, so that they are in the right place
         ids = np.concatenate((ids, l6_ids))
         origins = np.concatenate(
             (origins, np.zeros(len(l6_ids)) + 6))
+        ts.set_time('L6')
         
         # Level 7/10: any particles that are within a certain distance from the
         # (input) subhalo centre. Gas particles are assigned origin code 7
@@ -728,6 +769,7 @@ class TargetGalaxy(GalaxyBase):
         else:
             l7_ids = np.zeros(0, dtype=np.uint64)
             l10_ids = np.zeros(0, dtype=np.uint64)
+        ts.set_time('L7')
             
         # Level 8: particles from the last snapshot's 'waiting list'
         if include_l8:
@@ -735,12 +777,14 @@ class TargetGalaxy(GalaxyBase):
             ids = np.concatenate((ids, l8_ids))
             origins = np.concatenate(
                 (origins, np.zeros(len(l8_ids)) + 8))
-
+        ts.set_time('L8')
+            
         # Finally, Level 10 (waitlist)
         ids = np.concatenate((ids, l10_ids))
         origins = np.concatenate(
             (origins, np.zeros(len(l10_ids)) + 10))
-
+        ts.set_time('L10')
+        
         # We now have the full list, including duplications. For bookkeeping,
         # let's record how long that list is
         self.n_source_tot = len(ids)
@@ -748,7 +792,8 @@ class TargetGalaxy(GalaxyBase):
         # Now reduce the ID list to its unique subset, keeping track of the
         # best origin code for each particle
         ids, origins = self.unicate_ids(ids, origins)
-
+        ts.set_time('Unicate IDs')
+        
         # Too many passive particles, and especially unrelated/free ones,
         # may spell trouble. Warn explicitly if that happens...
         n_passive = np.count_nonzero(origins > 4)
@@ -763,10 +808,12 @@ class TargetGalaxy(GalaxyBase):
             print(f"WARNING: {n_l7}/{len(ids)} unbound particles [L7]!")
         if n_l8 > 0.5 * len(ids):
             print(f"WARNING: {n_l8}/{len(ids)} waitlist particles [L8]!")
-                                
+        ts.set_time('Check for warnings')
+            
         # What we really want is the indices into the particle list
         inds = self.subhaloes.snap.particles.ids_to_indices(ids)
-
+        ts.set_time('Find indices')
+        
         # Restrict the selection to only those particles in the same FOF
         # group as the target galaxy
         ind_samefof = np.nonzero(
@@ -774,6 +821,7 @@ class TargetGalaxy(GalaxyBase):
         inds = inds[ind_samefof]
         origins = origins[ind_samefof]
         ids = ids[ind_samefof]
+        ts.set_time('Check for same FOF')
         
         # Check which IDs come from a parent in the previous snapshot -- these
         # are special as they can be stolen even if still bound to the parent.
@@ -783,7 +831,8 @@ class TargetGalaxy(GalaxyBase):
         ids_parents = prior_subhaloes.find_parent_particle_ids(self.igal)
         ind_0 = np.nonzero(np.isin(ids, ids_parents))[0]
         origins[ind_0] = -origins[ind_0]
-
+        ts.set_time('Find parents')
+        
         return inds, origins.astype(np.int8)
 
     def unicate_ids(self, ids_full, origins_full):      # Class: Galaxy
