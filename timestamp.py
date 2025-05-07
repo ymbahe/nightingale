@@ -196,7 +196,7 @@ class TimeStamp:
 
                                                         # Class: TimeStamp
     def print_time_usage(self, caption=None, mode='detailed',
-                         minutes=False, percent=True):          
+                         minutes=False, percent=True, caption_style='min'):
         """
         Print a report on the internally stored times.
 
@@ -233,8 +233,11 @@ class TimeStamp:
 
         print("")
         print("-" * 70)
-        print(caption + " ({:.2f} min.)"
-              .format(self.fullTime/60))
+        if caption_style == 'min':
+            print(caption + " ({:.2f} min.)" .format(self.fullTime/60))
+        else:
+            print(caption + " ({:.2f} sec.)" .format(self.fullTime))
+
         print("-" * 70)
 
         if mode in ['detailed', 'top']:
